@@ -1,0 +1,1387 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>HUD-11 Employee Interview</title>
+<style>
+/* ── RESET & BASE ─────────────────────────────────────────────── */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+:root {
+  --navy:   #0d1b2a;
+  --navy2:  #152235;
+  --navy3:  #1e3250;
+  --amber:  #f5a623;
+  --amber2: #ffc55a;
+  --green:  #27ae60;
+  --red:    #e74c3c;
+  --gray:   #8899aa;
+  --light:  #cdd8e3;
+  --white:  #f0f4f8;
+  --font:   -apple-system, 'Segoe UI', sans-serif;
+  --mono:   'Courier New', monospace;
+}
+html, body { height: 100%; background: var(--navy); color: var(--white); font-family: var(--font); font-size: 15px; }
+
+/* ── DASHBOARD ────────────────────────────────────────────────── */
+#dashboard { display: flex; flex-direction: column; min-height: 100vh; padding: 0 0 40px; }
+.dash-header { background: var(--navy2); border-bottom: 2px solid var(--amber); padding: 18px 24px; display: flex; align-items: center; gap: 16px; }
+.dash-header h1 { font-size: 1.15rem; font-weight: 700; letter-spacing: .04em; color: var(--amber); }
+.dash-header .sub { font-size: .78rem; color: var(--gray); margin-top: 2px; }
+.dash-header .logo { font-family: var(--mono); font-size: .7rem; color: var(--amber); opacity: .6; margin-left: auto; text-align: right; }
+.dash-body { padding: 24px; max-width: 900px; width: 100%; margin: 0 auto; flex: 1; }
+.dash-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 28px; }
+.btn-primary { background: var(--amber); color: var(--navy); font-weight: 700; border: none; border-radius: 8px; padding: 14px 20px; font-size: .95rem; cursor: pointer; letter-spacing: .02em; transition: background .15s; }
+.btn-primary:hover { background: var(--amber2); }
+.btn-secondary { background: var(--navy3); color: var(--amber); font-weight: 600; border: 1px solid var(--amber); border-radius: 8px; padding: 14px 20px; font-size: .95rem; cursor: pointer; transition: background .15s; }
+.btn-secondary:hover { background: #2a4266; }
+.section-label { font-size: .72rem; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; color: var(--amber); margin-bottom: 10px; }
+.interview-card { background: var(--navy2); border: 1px solid var(--navy3); border-radius: 10px; padding: 16px 18px; margin-bottom: 10px; cursor: pointer; transition: border-color .15s, background .15s; display: flex; flex-direction: column; gap: 6px; }
+.interview-card:hover { border-color: var(--amber); background: #1a2c46; }
+.card-name { font-weight: 700; font-size: 1rem; }
+.card-meta { font-family: var(--mono); font-size: .78rem; color: var(--amber); }
+.card-date { font-size: .75rem; color: var(--gray); }
+.card-actions { display: flex; gap: 8px; margin-top: 6px; }
+.card-btn { font-size: .72rem; padding: 4px 10px; border-radius: 5px; border: 1px solid; cursor: pointer; font-weight: 600; background: transparent; }
+.card-btn.open { border-color: var(--amber); color: var(--amber); }
+.card-btn.open:hover { background: var(--amber); color: var(--navy); }
+.card-btn.del { border-color: var(--red); color: var(--red); }
+.card-btn.del:hover { background: var(--red); color: #fff; }
+.card-btn.print { border-color: var(--green); color: var(--green); }
+.card-btn.print:hover { background: var(--green); color: #fff; }
+.empty-state { text-align: center; color: var(--gray); padding: 60px 20px; font-size: .9rem; }
+.dash-footer { text-align: center; font-size: .68rem; color: var(--gray); margin-top: 32px; }
+
+/* Storage meter */
+.storage-bar-wrap { margin-bottom: 24px; }
+.storage-label { display: flex; justify-content: space-between; font-size: .72rem; color: var(--gray); margin-bottom: 5px; }
+.storage-bar { height: 5px; background: var(--navy3); border-radius: 3px; overflow: hidden; }
+.storage-fill { height: 100%; background: var(--amber); border-radius: 3px; transition: width .4s; }
+.storage-fill.warn { background: var(--red); }
+
+/* ── BOTTOM SHEET ─────────────────────────────────────────────── */
+.sheet-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,.6); z-index: 200; }
+.sheet-overlay.open { display: flex; align-items: flex-end; }
+.sheet { background: var(--navy2); border-radius: 16px 16px 0 0; width: 100%; max-height: 70vh; overflow-y: auto; padding: 20px; border-top: 2px solid var(--amber); }
+.sheet-title { font-weight: 700; font-size: 1rem; margin-bottom: 14px; color: var(--amber); }
+.sheet-item { padding: 14px; border: 1px solid var(--navy3); border-radius: 8px; margin-bottom: 8px; cursor: pointer; }
+.sheet-item:hover { border-color: var(--amber); background: #1a2c46; }
+.sheet-item .s-name { font-weight: 700; }
+.sheet-item .s-meta { font-family: var(--mono); font-size: .78rem; color: var(--amber); margin-top: 2px; }
+
+/* ── FORM VIEW ────────────────────────────────────────────────── */
+#formView { display: none; min-height: 100vh; flex-direction: column; }
+.form-header { background: var(--navy2); border-bottom: 2px solid var(--amber); padding: 14px 18px; display: flex; align-items: center; gap: 12px; position: sticky; top: 0; z-index: 100; }
+.form-header .back-btn { background: none; border: 1px solid var(--amber); color: var(--amber); border-radius: 6px; padding: 7px 12px; font-size: .85rem; cursor: pointer; font-weight: 700; }
+.form-header .form-title { font-weight: 700; font-size: 1rem; color: var(--amber); flex: 1; }
+.lang-toggle { display: flex; border: 1px solid var(--navy3); border-radius: 6px; overflow: hidden; }
+.lang-btn { padding: 7px 14px; font-size: .8rem; font-weight: 700; cursor: pointer; border: none; background: var(--navy3); color: var(--gray); transition: all .15s; }
+.lang-btn.active { background: var(--amber); color: var(--navy); }
+.form-header .save-btn { background: var(--green); color: #fff; border: none; border-radius: 6px; padding: 7px 14px; font-size: .85rem; font-weight: 700; cursor: pointer; }
+.form-body { padding: 20px; max-width: 860px; margin: 0 auto; width: 100%; }
+
+/* Form sections */
+.fsec { background: var(--navy2); border-radius: 10px; margin-bottom: 16px; overflow: hidden; }
+.fsec-head { background: var(--navy3); padding: 10px 16px; font-size: .78rem; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--amber); border-bottom: 1px solid #1e3250; }
+.fsec-body { padding: 16px; }
+.fgrid { display: grid; gap: 12px; }
+.fgrid.cols2 { grid-template-columns: 1fr 1fr; }
+.fgrid.cols3 { grid-template-columns: 1fr 1fr 1fr; }
+.fgrid.cols4 { grid-template-columns: 1fr 1fr 1fr 1fr; }
+.frow { display: flex; flex-direction: column; gap: 4px; }
+.frow label { font-size: .72rem; font-weight: 700; letter-spacing: .05em; text-transform: uppercase; color: var(--gray); }
+.frow label span.lnum { color: var(--amber); margin-right: 4px; }
+input[type=text], input[type=tel], input[type=email], input[type=date], textarea, select {
+  background: #0d1b2a; border: 1px solid var(--navy3); border-radius: 6px; color: var(--white);
+  font-family: var(--font); font-size: .9rem; padding: 9px 11px; width: 100%;
+  transition: border-color .15s;
+}
+input:focus, textarea:focus, select:focus { outline: none; border-color: var(--amber); }
+textarea { resize: vertical; min-height: 70px; line-height: 1.5; }
+
+/* Radio / checkbox groups */
+.yn-group { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin-top: 4px; }
+.yn-label { font-size: .72rem; font-weight: 700; letter-spacing: .05em; text-transform: uppercase; color: var(--gray); margin-bottom: 2px; }
+.yn-opt { display: flex; align-items: center; gap: 5px; font-size: .88rem; cursor: pointer; }
+.yn-opt input[type=radio] { accent-color: var(--amber); width: 15px; height: 15px; }
+.freq-group { display: flex; flex-direction: column; gap: 5px; }
+.freq-opt { display: flex; align-items: center; gap: 6px; font-size: .88rem; cursor: pointer; }
+.freq-opt input[type=radio] { accent-color: var(--amber); }
+
+/* Fringe block */
+.fringe-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; align-items: start; }
+
+/* YN grid for questions 8-11 */
+.qgrid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.qblock { background: #0d1b2a; border-radius: 8px; padding: 12px 14px; border: 1px solid var(--navy3); }
+.qblock .qlabel { font-size: .8rem; color: var(--light); margin-bottom: 8px; line-height: 1.4; }
+
+/* Signature canvas */
+.sig-wrap { border: 1px solid var(--navy3); border-radius: 6px; overflow: hidden; background: #fff; position: relative; }
+.sig-canvas { display: block; touch-action: none; width: 100%; cursor: crosshair; }
+.sig-controls { display: flex; gap: 8px; margin-top: 6px; }
+.sig-btn { font-size: .72rem; padding: 4px 10px; border-radius: 4px; border: 1px solid var(--navy3); background: transparent; color: var(--gray); cursor: pointer; }
+.sig-btn:hover { border-color: var(--amber); color: var(--amber); }
+
+/* Payroll section */
+.payroll-notice { background: #1a2c46; border: 1px dashed var(--navy3); border-radius: 8px; padding: 14px 16px; color: var(--gray); font-size: .85rem; text-align: center; }
+
+/* Toast */
+#toast { position: fixed; bottom: 30px; left: 50%; transform: translateX(-50%); background: var(--green); color: #fff; padding: 10px 22px; border-radius: 20px; font-weight: 700; font-size: .88rem; opacity: 0; transition: opacity .3s; pointer-events: none; z-index: 9999; }
+#toast.show { opacity: 1; }
+
+/* ── PRINT STYLES ─────────────────────────────────────────────── */
+@media print {
+  * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  html, body { background: #fff !important; color: #000 !important; font-size: 9.5pt; font-family: Arial, sans-serif; }
+  #dashboard, #formView, #toast, .sheet-overlay { display: none !important; }
+  #printArea { display: block !important; }
+
+  @page { size: letter; margin: .5in .5in .4in; }
+
+  .pr-page { page-break-after: always; }
+  .pr-page:last-child { page-break-after: avoid; }
+
+  /* HUD header */
+  .pr-hud-header { display: grid; grid-template-columns: 1fr auto; align-items: start; margin-bottom: 4pt; }
+  .pr-hud-title { font-size: 14pt; font-weight: bold; }
+  .pr-hud-agency { font-size: 7.5pt; line-height: 1.4; }
+  .pr-hud-omb { text-align: right; font-size: 7.5pt; line-height: 1.6; }
+
+  /* Grid table */
+  .pr-table { width: 100%; border-collapse: collapse; margin-bottom: 0; }
+  .pr-table td, .pr-table th { border: 1px solid #000; padding: 3pt 4pt; vertical-align: top; font-size: 8.5pt; }
+  .pr-field-label { font-size: 7pt; font-weight: bold; display: block; margin-bottom: 2pt; }
+  .pr-field-val { font-size: 8.5pt; min-height: 14pt; display: block; }
+  .pr-yn-row { display: flex; gap: 8pt; align-items: center; }
+  .pr-yn-box { display: inline-block; width: 9pt; height: 9pt; border: 1pt solid #000; vertical-align: middle; margin-right: 2pt; }
+  .pr-yn-box.checked { background: #000; }
+  .pr-sig-img { max-height: 30pt; max-width: 100%; }
+  .pr-sig-line { border-bottom: 1pt solid #000; min-height: 28pt; display: block; }
+  .pr-tall { min-height: 48pt; }
+  .pr-xtall { min-height: 72pt; }
+  .pr-section-title { font-weight: bold; font-size: 8pt; background: #ddd; padding: 2pt 4pt; }
+  .pr-payroll-section { background: #f0f0f0; }
+  .pr-footer { font-size: 6.5pt; margin-top: 4pt; text-align: right; color: #555; }
+  .pr-page-footer { font-size: 6.5pt; text-align: center; margin-top: 8pt; }
+  .pr-addl-page { page-break-before: always; }
+
+  /* Counter */
+  .pr-page-footer::before { content: "Previous editions are obsolete   Form HUD-11 (03/2025)"; }
+}
+
+/* ── MOBILE ───────────────────────────────────────────────────── */
+@media (max-width: 600px) {
+  .fgrid.cols2, .fgrid.cols3, .fgrid.cols4 { grid-template-columns: 1fr; }
+  .fringe-grid { grid-template-columns: 1fr; }
+  .qgrid { grid-template-columns: 1fr; }
+  .dash-actions { grid-template-columns: 1fr; }
+}
+</style>
+</head>
+<body>
+
+<!-- ═══════════════════════════════════════════════════════════ -->
+<!-- DASHBOARD                                                   -->
+<!-- ═══════════════════════════════════════════════════════════ -->
+<div id="dashboard">
+  <div class="dash-header">
+    <div>
+      <div class="dash-header h1" style="font-size:1.15rem;font-weight:700;letter-spacing:.04em;color:var(--amber);">HUD-11 Employee Interview</div>
+      <div class="sub">Record of Employee Interview · Davis-Bacon &amp; Labor Standards</div>
+    </div>
+    <div class="logo">Labor Compliance<br>Solutions</div>
+  </div>
+
+  <div class="dash-body">
+    <!-- Storage meter -->
+    <div class="storage-bar-wrap">
+      <div class="storage-label">
+        <span>localStorage</span>
+        <span id="storageText">Calculating…</span>
+      </div>
+      <div class="storage-bar"><div class="storage-fill" id="storageFill" style="width:0%"></div></div>
+    </div>
+
+    <!-- Action buttons -->
+    <div class="dash-actions" style="grid-template-columns:1fr 1fr 1fr">
+      <button class="btn-primary" onclick="newInterview()">+ New Interview</button>
+      <button class="btn-secondary" onclick="openCopySheet()">⎘ Copy Forward</button>
+      <button class="btn-secondary" onclick="openInstructions()">📋 Instructions</button>
+    </div>
+
+    <!-- Export/Import -->
+    <div style="display:flex;gap:10px;margin-bottom:24px;">
+      <button class="btn-secondary" style="flex:1;padding:9px;" onclick="exportAll()">↓ Export Backup</button>
+      <label class="btn-secondary" style="flex:1;padding:9px;text-align:center;cursor:pointer;">
+        ↑ Import Backup<input type="file" accept=".json" style="display:none" onchange="importAll(event)">
+      </label>
+    </div>
+
+    <!-- Interview list -->
+    <div class="section-label">Saved Interviews</div>
+    <div id="cardList"></div>
+  </div>
+
+  <div class="dash-footer">HUD-11 Interview Tool v1.0 | Labor Compliance Solutions | https://github.com/robvilla14</div>
+</div>
+
+<!-- Copy Forward sheet -->
+<div class="sheet-overlay" id="copySheet" onclick="if(event.target===this)closeCopySheet()">
+  <div class="sheet">
+    <div class="sheet-title">Copy Forward From…</div>
+    <div id="copyList"></div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════ -->
+<!-- FORM VIEW                                                   -->
+<!-- ═══════════════════════════════════════════════════════════ -->
+<div id="formView">
+  <div class="form-header">
+    <button class="back-btn" onclick="goBack()">← Back</button>
+    <div class="form-title" id="formTitle">New Interview</div>
+    <div class="lang-toggle">
+      <button class="lang-btn active" id="btnEN" onclick="setLang('en')">EN</button>
+      <button class="lang-btn" id="btnES" onclick="setLang('es')">ES</button>
+    </div>
+    <button class="save-btn" onclick="saveInterview()">Save</button>
+  </div>
+  <div class="form-body" id="formBody"></div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════ -->
+<!-- INSTRUCTIONS VIEW                                           -->
+<!-- ═══════════════════════════════════════════════════════════ -->
+<div id="instructionsView" style="display:none;flex-direction:column;min-height:100vh;">
+  <div class="form-header">
+    <button class="back-btn" onclick="closeInstructions()">← Back</button>
+    <div class="form-title" id="instrTitle">Instructions — Form HUD-11</div>
+    <div class="lang-toggle">
+      <button class="lang-btn active" id="instrBtnEN" onclick="setInstrLang('en')">EN</button>
+      <button class="lang-btn" id="instrBtnES" onclick="setInstrLang('es')">ES</button>
+    </div>
+  </div>
+  <div style="padding:24px;max-width:860px;margin:0 auto;width:100%;">
+    <div style="background:var(--navy2);border-radius:10px;overflow:hidden;margin-bottom:16px;">
+      <div style="background:var(--navy3);padding:10px 16px;font-size:.78rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--amber);border-bottom:1px solid #1e3250;" id="instrHeading">General Instructions</div>
+      <div style="padding:20px;font-size:.88rem;line-height:1.75;color:var(--light);" id="instrGeneral"></div>
+    </div>
+    <div style="background:var(--navy2);border-radius:10px;overflow:hidden;margin-bottom:16px;">
+      <div style="background:var(--navy3);padding:10px 16px;font-size:.78rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--amber);border-bottom:1px solid #1e3250;" id="instrCompHeading">Completing the Form HUD-11</div>
+      <div style="padding:20px;font-size:.88rem;line-height:1.75;color:var(--light);" id="instrComplete"></div>
+    </div>
+    <div style="background:var(--navy3);border-radius:8px;padding:14px 18px;font-size:.75rem;color:var(--gray);text-align:center;margin-bottom:24px;">
+      <span id="instrFootnote"></span>
+    </div>
+    <div style="text-align:center;padding-bottom:32px;">
+      <button class="btn-secondary" onclick="closeInstructions()" style="min-width:160px;">← Back to Dashboard</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════ -->
+<!-- PRINT AREA (hidden, populated on print)                     -->
+<!-- ═══════════════════════════════════════════════════════════ -->
+<div id="printArea" style="display:none;"></div>
+
+<!-- Toast -->
+<div id="toast"></div>
+
+<!-- Print tip modal -->
+<div id="printModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:500;align-items:center;justify-content:center;">
+  <div style="background:var(--navy2);border:2px solid var(--amber);border-radius:12px;padding:28px;max-width:420px;width:90%;text-align:center;">
+    <div style="font-size:1.1rem;font-weight:700;color:var(--amber);margin-bottom:12px;">Before You Print</div>
+    <div style="font-size:.88rem;line-height:1.6;color:var(--light);margin-bottom:20px;">
+      In your browser's print dialog, please <strong>uncheck "Headers and Footers"</strong> for a clean form output.<br><br>
+      Also confirm <strong>Paper Size: Letter</strong> and <strong>Margins: Default</strong>.
+    </div>
+    <button class="btn-primary" style="width:100%;" onclick="confirmPrint()">Got It — Open Print Dialog</button>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════ -->
+<!-- JAVASCRIPT                                                  -->
+<!-- ═══════════════════════════════════════════════════════════ -->
+<script>
+// ── STRINGS ──────────────────────────────────────────────────────
+const STRINGS = {
+  en: {
+    secProject:   'Project Information',
+    secEmployee:  'Employee Information',
+    secWork:      'Work & Pay',
+    secFringe:    'Fringe Benefits',
+    secClass:     'Classification & Duties',
+    secQA:        'Questions',
+    secEmpSig:    'Employee Signature',
+    secObserved:  'Interviewer Observations',
+    secItvSig:    'Interviewer',
+    secPayroll:   'Payroll Examination (completed by Payroll Examiner)',
+    secAddl:      'Additional Remarks',
+
+    l1a: 'Project Name',
+    l1b: 'Project Number',
+    l1c: 'Contractor or Subcontractor (Employer)',
+    l2a: 'Employee\'s Full Name',
+    l2b: 'Employee\'s Phone Number (incl. area code) & Email',
+    l2bPhone: 'Phone',
+    l2bEmail: 'Email',
+    l2c: 'Employee\'s Home Address & Zip Code',
+    l2d: 'Verification of Identification?',
+    l3a: 'How long on this job & avg. weekly hours worked?',
+    l3b: 'Last date on this job before today?',
+    l3c: 'Number of hours last day on this job?',
+    l4a: 'Hourly Rate of Pay',
+    l4b: 'Fringe Benefits?',
+    l4bMed: 'Medical',
+    l4bPen: 'Pension',
+    l4c: 'Frequency of Pay',
+    l5:  'Job Classification(s)',
+    l6:  'Your Duties',
+    l7:  'Tools or Equipment Used',
+    l8:  'Are you an apprentice or trainee?',
+    l8a: 'Have you provided a copy of your apprenticeship certificate?',
+    l9:  'Are you paid for all hours worked?',
+    l10: 'Are you paid at least time and ½ (1.5x) for all hours worked over 40 in a week?',
+    l11: 'Have you ever been threatened or coerced into giving up any part of your pay?',
+    l12a: 'Employee Signature',
+    l12b: 'Date',
+    l13: 'Duties Observed by the Interviewer (be specific)',
+    l14: 'Remarks',
+    l15a: 'Interviewer Name (print)',
+    l15b: 'Signature of Interviewer',
+    l15c: 'Date of Interview',
+    l16: 'Remarks',
+    l17a: 'Signature of Payroll Examiner',
+    l17b: 'Date',
+    l18: 'Additional Remarks',
+    yes: 'Yes', no: 'No',
+    weekly: 'Weekly', biweekly: 'Biweekly', semimonthly: 'Semi-monthly', other: 'Other',
+    payrollNotice: 'This section is completed by the Payroll Examiner after comparing this form against certified payroll reports. Leave blank when printing.',
+    clearSig: 'Clear', typeSig: 'Type Name',
+    formTitle: 'Record of Employee Interview',
+    agencyTitle: 'U.S. Department of Housing and Urban Development\nOffice of Davis-Bacon and Labor Standards',
+    omb: 'OMB Approval No. 2501-0009\n(exp. 03/31/2028)',
+    obsolete: 'Previous editions are obsolete   Form HUD-11 (03/2025)',
+    addlTitle: 'Additional Remarks',
+    instrTitle: 'Instructions — Form HUD-11',
+    instrHeading: 'General Instructions',
+    instrCompHeading: 'Completing the Form HUD-11',
+    instrFootnote: 'Form HUD-11 (03/2025) · OMB Approval No. 2501-0009 · Expires 03/31/2028 · This digital form faithfully follows the official HUD-11 layout.',
+    instrGeneral: `<p>This form is to be used by HUD and local agency staff for recording information gathered during on-site interviews with laborers and mechanics employed on projects subject to Federal prevailing wage requirements. Typically, the staff that will conduct on-site interviews and use this form are HUD staff and fee construction inspectors, HUD Labor Standards staff, and local agency labor standards contract monitors.</p>
+<p style="margin-top:12px">Information recorded on the form HUD-11 is evaluated for general compliance and compared to certified payroll reports submitted by the respective employer. The comparison tests the veracity of the payroll reports and may be critical to the successful conclusion of enforcement actions in the event of labor standards violations. The thoroughness and accuracy of the information gathered during interviews is crucial.</p>
+<p style="margin-top:12px">Note that the interview itself and the information collected on the form HUD-11 are considered <strong style="color:var(--amber)">confidential</strong>. Interviews should be conducted individually and privately. All laborers and mechanics employed on the job site must be made available for interview at the interviewer's request. The employee's participation, however, is <strong>voluntary</strong>.</p>
+<p style="margin-top:12px">Interviews shall be conducted in a manner and place that are conducive to the purposes of the interview and that cause the least inconvenience to the employer(s) and the employee(s).</p>`,
+    instrComplete: `<p><strong style="color:var(--amber)">Items 1a–1c:</strong> Self-explanatory.</p>
+<p style="margin-top:10px"><strong style="color:var(--amber)">Items 2a–2d:</strong> Enter the employee's full name, a telephone number where the employee can be reached, email address, and the employee's home address. Many construction workers use a temporary address in the locality of the project and have a more permanent address elsewhere. Obtain a more permanent address if available. Ask the employee for a form of identification (e.g., driver's license) to verify their name.</p>
+<p style="margin-top:10px"><strong style="color:var(--amber)">Items 3a–4c:</strong> Enter the employee's responses. Ask the employee about the frequency of pay (weekly, biweekly, semi-monthly, or other).</p>
+<p style="margin-top:10px"><strong style="color:var(--amber)">Items 5–7:</strong> Be certain that the employee's responses are specific. For example, job classification (#5) must identify the trade involved (e.g., Carpenter, Electrician, Plumber) — responses such as "journeyman" or "mechanic" are not helpful for compliance purposes.</p>
+<p style="margin-top:10px"><strong style="color:var(--amber)">Items 8–12b:</strong> Self-explanatory.</p>
+<p style="margin-top:10px"><strong style="color:var(--amber)">Items 13–15c:</strong> These items represent some of the most important information that can be gathered during on-site interviews. Please be specific about the duties you observed the employee performing. It may be easiest to make these observations before initiating the interview. Record any comments that may be helpful — for example, if the employee was working with a crew, how many workers were in the crew? Was the employee evasive?</p>
+<p style="margin-top:10px">The level of specificity warranted is directly related to the extent to which interviews or other observations indicate that there may be violations present. If interviews indicate possible underpayments involving a particular trade, interview as many workers in that trade as are available.</p>
+<p style="margin-top:10px"><strong style="color:var(--amber)">Items 16–17b:</strong> The information on the form HUD-11 may be reviewed for general compliance initially. For example: Is the job classification and wage rate stated by the employee compatible with the classifications and wage rates on the applicable wage decision? Are the duties observed by the interviewer consistent with the job classification?</p>
+<p style="margin-top:10px"><strong style="color:var(--amber)">Item 18:</strong> Place here any additional information you want to document, or continuing information from other lines that do not fit in their block space.</p>
+<p style="margin-top:10px">Once the corresponding certified payroll reports are received, the information on the HUD-11 shall be compared to the payroll reports. Any discrepancies shall be noted in Item 16, Remarks. If discrepancies are noted, follow-up actions to resolve them must be taken.</p>`,
+  },
+  es: {
+    secProject:   'Información del Proyecto',
+    secEmployee:  'Información del Empleado',
+    secWork:      'Trabajo y Pago',
+    secFringe:    'Beneficios Complementarios',
+    secClass:     'Clasificación y Deberes',
+    secQA:        'Preguntas',
+    secEmpSig:    'Firma del Empleado',
+    secObserved:  'Observaciones del Entrevistador',
+    secItvSig:    'Entrevistador',
+    secPayroll:   'Examinación de Nómina (completado por el Examinador de Nómina)',
+    secAddl:      'Comentarios Adicionales',
+
+    l1a: 'Nombre del Proyecto',
+    l1b: 'Número del Proyecto',
+    l1c: 'Contratista o Subcontratista (Patrón)',
+    l2a: 'Nombre Completo del Empleado',
+    l2b: 'Número de Teléfono (incluido prefijo local) y Correo Electrónico',
+    l2bPhone: 'Teléfono',
+    l2bEmail: 'Correo Electrónico',
+    l2c: 'Dirección Residencial y Código Postal del Empleado',
+    l2d: '¿Verificación de Identificación?',
+    l3a: '¿Cuánto tiempo lleva en este trabajo y promedio de horas semanales?',
+    l3b: '¿Última fecha en este trabajo antes de hoy?',
+    l3c: '¿Cuántas horas en su último día en este trabajo?',
+    l4a: 'Salario por Hora',
+    l4b: '¿Beneficios Complementarios?',
+    l4bMed: 'Seguro Médico',
+    l4bPen: 'Pensión',
+    l4c: 'Frecuencia de Pago',
+    l5:  'Clasificación(es) del Trabajo',
+    l6:  'Sus Deberes',
+    l7:  'Herramientas o Equipo Utilizado',
+    l8:  '¿Es aprendiz o está en capacitación?',
+    l8a: '¿Ha proporcionado una copia de su certificado de aprendizaje?',
+    l9:  '¿Le pagan todas las horas que trabaja?',
+    l10: '¿Le pagan al menos tiempo y medio (1.5x) por todas las horas que exceden las 40 semanales?',
+    l11: '¿Alguna vez le han amenazado o coaccionado a entregar parte de su paga?',
+    l12a: 'Firma del Empleado',
+    l12b: 'Fecha',
+    l13: 'Deberes Observados por el Entrevistador (sea específico)',
+    l14: 'Comentarios',
+    l15a: 'Nombre del Entrevistador (use letra de molde)',
+    l15b: 'Firma del Entrevistador',
+    l15c: 'Fecha de la Entrevista',
+    l16: 'Comentarios',
+    l17a: 'Firma del Examinador de Nómina',
+    l17b: 'Fecha',
+    l18: 'Comentarios Adicionales',
+    yes: 'Sí', no: 'No',
+    weekly: 'Semanal', biweekly: 'Quincenal', semimonthly: 'Semimensual', other: 'Otro',
+    payrollNotice: 'Esta sección es completada por el Examinador de Nómina al comparar este formulario con los informes de nómina certificados. Dejar en blanco al imprimir.',
+    clearSig: 'Limpiar', typeSig: 'Escribir Nombre',
+    formTitle: 'Historial de Entrevista del Empleado',
+    agencyTitle: 'Departamento de Vivienda y Desarrollo Urbano de los EE. UU.\nOficina de Davis-Bacon y Normas Laborales',
+    omb: 'Núm. de Aprobación de la OMB 2501-0009\n(exp. 03/31/2028)',
+    obsolete: 'Toda publicación previa queda obsoleta   Formulario HUD-11 (03/2025)',
+    addlTitle: 'Comentarios Adicionales',
+    instrTitle: 'Instrucciones — Formulario HUD-11',
+    instrHeading: 'Instrucciones Generales',
+    instrCompHeading: 'Instrucciones para Completar el Formulario HUD-11',
+    instrFootnote: 'Formulario HUD-11 (03/2025) · Núm. de Aprobación de la OMB 2501-0009 · Vence 03/31/2028 · Este formulario digital sigue fielmente el formato oficial del HUD-11.',
+    instrGeneral: `<p>Este formulario será utilizado por personal de HUD y las agencias locales para registrar toda información recopilada durante las entrevistas en el sitio con obreros y mecánicos empleados en proyectos sujetos a los requisitos federales de tasas vigentes. Por lo general, el personal encargado de realizar las entrevistas en el sitio incluye al personal de HUD e inspectores de construcción contratados, personal especializado en las normas laborales de HUD e inspectores de contratos de normas laborales de las agencias locales.</p>
+<p style="margin-top:12px">La información recopilada en el formulario HUD-11 se evalúa para verificar el cumplimiento general y se compara con los informes de nómina certificados presentados por el patrón correspondiente. Esta comparación examina la veracidad de los informes de nómina y puede ser fundamental para la conclusión exitosa de las acciones de cumplimiento en caso de que existan violaciones a las normas laborales. La meticulosidad y exactitud de la información recopilada durante las entrevistas es esencial.</p>
+<p style="margin-top:12px">Tenga en cuenta que tanto la entrevista como la información recopilada en el formulario HUD-11 se consideran <strong style="color:var(--amber)">confidenciales</strong>. Las entrevistas deben realizarse de manera individual y privada. Todos los trabajadores y mecánicos empleados en el sitio de trabajo deben estar disponibles para las entrevistas a solicitud del entrevistador. Sin embargo, la participación del empleado es <strong>voluntaria</strong>.</p>
+<p style="margin-top:12px">Las entrevistas deben llevarse a cabo de una manera y en un lugar que sean apropiados para los fines de la entrevista y que causen el menor inconveniente al patrón(es) y empleado(s).</p>`,
+    instrComplete: `<p><strong style="color:var(--amber)">Números 1a–1c:</strong> Autoexplicativos.</p>
+<p style="margin-top:10px"><strong style="color:var(--amber)">Números 2a–2d:</strong> Anote el nombre completo del empleado, un número telefónico donde se le pueda contactar, dirección de correo electrónico y su dirección residencial. Muchos trabajadores de construcción usan una dirección temporal en la localidad del proyecto. Obtenga una dirección más permanente si es posible. Pídale al empleado una forma de identificación (por ejemplo, licencia de conducir) para verificar su nombre.</p>
+<p style="margin-top:10px"><strong style="color:var(--amber)">Números 3a–4c:</strong> Anote las respuestas del empleado. Pregúntele sobre la frecuencia de pago (semanal, quincenal, semimensual u otro).</p>
+<p style="margin-top:10px"><strong style="color:var(--amber)">Números 5–7:</strong> Asegúrese de que las respuestas del empleado sean específicas. Por ejemplo, la clasificación del trabajo (#5) deberá identificar el tipo de oficio (por ejemplo, carpintero, electricista, plomero) — respuestas como "jornalero" o "mecánico" no son útiles para los propósitos de cumplimiento.</p>
+<p style="margin-top:10px"><strong style="color:var(--amber)">Números 8–12b:</strong> Autoexplicativos.</p>
+<p style="margin-top:10px"><strong style="color:var(--amber)">Números 13–15c:</strong> Estos asuntos representan alguna de la información más importante que se puede recopilar durante las entrevistas en el sitio. Por favor, sea específico respecto a los deberes que observó que desempeñaba el empleado. Será más fácil hacer estas observaciones antes de iniciar la entrevista. Anote cualquier comentario que pueda ser útil — por ejemplo, ¿cuántos trabajadores formaban el equipo? ¿Se mostraba evasivo el empleado?</p>
+<p style="margin-top:10px">El nivel de especificidad justificado está directamente relacionado con el grado en el que las entrevistas u otras observaciones indican posibles violaciones. Si las entrevistas indican posibles pagos insuficientes en algún oficio, se recomienda entrevistar a tantos trabajadores de ese oficio como estén disponibles.</p>
+<p style="margin-top:10px"><strong style="color:var(--amber)">Números 16–17b:</strong> Inicialmente, la información en el HUD-11 puede ser revisada para conformidad general. Por ejemplo: ¿La clasificación del trabajo y el salario declarados son compatibles con los establecidos en las decisiones de salario correspondientes? ¿Concuerdan los deberes observados con la clasificación del trabajo?</p>
+<p style="margin-top:10px"><strong style="color:var(--amber)">Número 18:</strong> Coloque aquí cualquier información adicional que desee documentar o información adicional de otras secciones que no quepa en los espacios correspondientes.</p>
+<p style="margin-top:10px">Una vez recibidos los informes de nómina certificados, la información en el HUD-11 se comparará con dichos informes. Cualquier discrepancia deberá ser anotada en el número 16. Si se observa alguna discrepancia, deberán tomarse las acciones de seguimiento necesarias para resolverla.</p>`,
+  }
+};
+
+// ── DATA ──────────────────────────────────────────────────────────
+const STORAGE_KEY = 'hud11_v1';
+let currentInterview = null;
+let currentLang = 'en';
+let printTipShown = !!localStorage.getItem('hud11_print_tip');
+
+function blankInterview() {
+  return {
+    id: Date.now().toString(),
+    created: new Date().toISOString(),
+    updated: new Date().toISOString(),
+    lang: 'en',
+    projectName: '', projectNumber: '', contractor: '',
+    empName: '', empPhone: '', empEmail: '', empAddress: '', empIdVerified: '',
+    timeOnJob: '', lastDate: '', hoursLastDay: '',
+    hourlyRate: '', fringeMedical: '', fringePension: '', payFrequency: '',
+    classifications: '', duties: '', tools: '',
+    apprentice: '', apprenticeCert: '', paidAllHours: '', overtime: '', threatened: '',
+    empSignature: '', empSignDate: '',
+    observedDuties: '', remarks: '',
+    interviewerName: '', interviewerSignature: '', interviewDate: '',
+    additionalRemarks: ''
+  };
+}
+
+function getAll() {
+  try { return JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]'); } catch { return []; }
+}
+function saveAll(arr) { localStorage.setItem(STORAGE_KEY, JSON.stringify(arr)); }
+
+function updateStorage() {
+  const used = new Blob([localStorage.getItem(STORAGE_KEY)||'']).size;
+  const pct = Math.min(100, (used / (5*1024*1024)) * 100);
+  const kb = (used/1024).toFixed(1);
+  document.getElementById('storageText').textContent = kb + ' KB / ~5 MB';
+  const fill = document.getElementById('storageFill');
+  fill.style.width = pct + '%';
+  fill.classList.toggle('warn', pct > 80);
+}
+
+// ── DASHBOARD ─────────────────────────────────────────────────────
+// ── INSTRUCTIONS VIEW ────────────────────────────────────────────
+let instrLang = 'en';
+
+function openInstructions() {
+  instrLang = currentLang || 'en';
+  document.getElementById('dashboard').style.display = 'none';
+  document.getElementById('instructionsView').style.display = 'flex';
+  renderInstructions();
+}
+function closeInstructions() {
+  document.getElementById('instructionsView').style.display = 'none';
+  document.getElementById('dashboard').style.display = 'flex';
+}
+function setInstrLang(lang) {
+  instrLang = lang;
+  document.getElementById('instrBtnEN').classList.toggle('active', lang === 'en');
+  document.getElementById('instrBtnES').classList.toggle('active', lang === 'es');
+  renderInstructions();
+}
+function renderInstructions() {
+  const s = STRINGS[instrLang] || STRINGS.en;
+  document.getElementById('instrTitle').textContent = s.instrTitle;
+  document.getElementById('instrHeading').textContent = s.instrHeading;
+  document.getElementById('instrCompHeading').textContent = s.instrCompHeading;
+  document.getElementById('instrGeneral').innerHTML = s.instrGeneral;
+  document.getElementById('instrComplete').innerHTML = s.instrComplete;
+  document.getElementById('instrFootnote').textContent = s.instrFootnote;
+}
+
+function renderDashboard() {
+  const list = document.getElementById('cardList');
+  const all = getAll();
+  updateStorage();
+  if (!all.length) {
+    list.innerHTML = '<div class="empty-state">No saved interviews yet.<br>Tap "+ New Interview" to begin.</div>';
+    return;
+  }
+  list.innerHTML = all.slice().reverse().map(iv => `
+    <div class="interview-card">
+      <div class="card-name">${esc(iv.empName || 'Unnamed Employee')}</div>
+      <div class="card-meta">${esc(iv.projectName||'—')} ${iv.projectNumber ? '#'+esc(iv.projectNumber) : ''}</div>
+      <div class="card-date">${iv.interviewDate ? 'Interview: '+iv.interviewDate : ''} &nbsp; Saved: ${fmtDT(iv.updated)}</div>
+      <div class="card-actions">
+        <button class="card-btn open" onclick="openInterview('${iv.id}')">Open</button>
+        <button class="card-btn print" onclick="printInterview('${iv.id}')">Print / PDF</button>
+        <button class="card-btn del" onclick="deleteInterview('${iv.id}')">Delete</button>
+      </div>
+    </div>`).join('');
+}
+
+function esc(s) { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+function fmtDT(iso) {
+  if (!iso) return '';
+  const d = new Date(iso);
+  return d.toLocaleDateString('en-US') + ' ' + d.toLocaleTimeString('en-US', {hour:'numeric',minute:'2-digit'});
+}
+
+// ── COPY FORWARD ──────────────────────────────────────────────────
+function openCopySheet() {
+  const all = getAll();
+  if (!all.length) { showToast('No saved interviews to copy from.'); return; }
+  const list = document.getElementById('copyList');
+  list.innerHTML = all.slice().reverse().map(iv => `
+    <div class="sheet-item" onclick="doCopyForward('${iv.id}')">
+      <div class="s-name">${esc(iv.empName||'Unnamed Employee')}</div>
+      <div class="s-meta">${esc(iv.projectName||'—')} ${iv.projectNumber ? '#'+esc(iv.projectNumber) : ''}</div>
+    </div>`).join('');
+  document.getElementById('copySheet').classList.add('open');
+}
+function closeCopySheet() { document.getElementById('copySheet').classList.remove('open'); }
+function doCopyForward(id) {
+  closeCopySheet();
+  const all = getAll();
+  const src = all.find(iv => iv.id === id);
+  if (!src) return;
+  const iv = blankInterview();
+  iv.projectName        = src.projectName;
+  iv.projectNumber      = src.projectNumber;
+  iv.interviewerName    = src.interviewerName;
+  iv.interviewerSignature = src.interviewerSignature;
+  iv.interviewDate      = src.interviewDate;
+  openForm(iv);
+}
+
+// ── OPEN / NEW ────────────────────────────────────────────────────
+function newInterview() { openForm(blankInterview()); }
+function openInterview(id) {
+  const all = getAll();
+  const iv = all.find(i => i.id === id);
+  if (iv) openForm(iv);
+}
+
+function openForm(iv) {
+  currentInterview = JSON.parse(JSON.stringify(iv));
+  currentLang = iv.lang || 'en';
+  document.getElementById('dashboard').style.display = 'none';
+  const fv = document.getElementById('formView');
+  fv.style.display = 'flex';
+  updateLangBtns();
+  renderForm();
+}
+
+function goBack() {
+  autoSave();
+  document.getElementById('formView').style.display = 'none';
+  document.getElementById('dashboard').style.display = 'flex';
+  renderDashboard();
+}
+
+// ── SAVE ──────────────────────────────────────────────────────────
+function autoSave() {
+  if (!currentInterview) return;
+  currentInterview.updated = new Date().toISOString();
+  currentInterview.lang = currentLang;
+  const all = getAll();
+  const idx = all.findIndex(i => i.id === currentInterview.id);
+  if (idx >= 0) all[idx] = currentInterview; else all.push(currentInterview);
+  saveAll(all);
+}
+function saveInterview() {
+  autoSave();
+  showToast('Saved ✓');
+  setTimeout(() => {
+    document.getElementById('formView').style.display = 'none';
+    document.getElementById('dashboard').style.display = 'flex';
+    renderDashboard();
+  }, 800);
+}
+
+function deleteInterview(id) {
+  if (!confirm('Delete this interview?')) return;
+  saveAll(getAll().filter(i => i.id !== id));
+  renderDashboard();
+}
+
+// ── EXPORT / IMPORT ───────────────────────────────────────────────
+function exportAll() {
+  const data = JSON.stringify(getAll(), null, 2);
+  const a = document.createElement('a');
+  a.href = 'data:application/json;charset=utf-8,' + encodeURIComponent(data);
+  a.download = 'hud11-backup-' + new Date().toISOString().slice(0,10) + '.json';
+  a.click();
+}
+function importAll(evt) {
+  const file = evt.target.files[0]; if (!file) return;
+  const r = new FileReader();
+  r.onload = e => {
+    try {
+      const arr = JSON.parse(e.target.result);
+      if (!Array.isArray(arr)) throw new Error();
+      saveAll(arr); renderDashboard(); showToast('Imported ' + arr.length + ' interviews ✓');
+    } catch { showToast('Invalid backup file.'); }
+  };
+  r.readAsText(file);
+  evt.target.value = '';
+}
+
+// ── LANGUAGE ──────────────────────────────────────────────────────
+function setLang(lang) {
+  currentLang = lang;
+  currentInterview.lang = lang;
+  updateLangBtns();
+  renderForm();
+}
+function updateLangBtns() {
+  document.getElementById('btnEN').classList.toggle('active', currentLang === 'en');
+  document.getElementById('btnES').classList.toggle('active', currentLang === 'es');
+}
+function t(key) { return (STRINGS[currentLang] || STRINGS.en)[key] || key; }
+
+// ── FORM RENDER ───────────────────────────────────────────────────
+function renderForm() {
+  const ci = currentInterview;
+  const b = document.getElementById('formBody');
+  document.getElementById('formTitle').textContent = ci.empName || (currentLang==='es' ? 'Nueva Entrevista' : 'New Interview');
+
+  b.innerHTML = `
+
+<!-- PROJECT INFO -->
+<div class="fsec">
+  <div class="fsec-head">${t('secProject')}</div>
+  <div class="fsec-body">
+    <div class="fgrid cols2">
+      <div class="frow">
+        <label><span class="lnum">1a.</span>${t('l1a')}</label>
+        <input type="text" value="${esc(ci.projectName)}" oninput="currentInterview.projectName=this.value;document.getElementById('formTitle').textContent=currentInterview.empName||this.value||'New Interview'">
+      </div>
+      <div class="frow">
+        <label><span class="lnum">1b.</span>${t('l1b')}</label>
+        <input type="text" value="${esc(ci.projectNumber)}" oninput="currentInterview.projectNumber=this.value">
+      </div>
+    </div>
+    <div class="fgrid" style="margin-top:10px">
+      <div class="frow">
+        <label><span class="lnum">1c.</span>${t('l1c')}</label>
+        <input type="text" value="${esc(ci.contractor)}" oninput="currentInterview.contractor=this.value">
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- EMPLOYEE INFO -->
+<div class="fsec">
+  <div class="fsec-head">${t('secEmployee')}</div>
+  <div class="fsec-body">
+    <div class="fgrid">
+      <div class="frow">
+        <label><span class="lnum">2a.</span>${t('l2a')}</label>
+        <input type="text" value="${esc(ci.empName)}" oninput="currentInterview.empName=this.value;document.getElementById('formTitle').textContent=this.value||'New Interview'">
+      </div>
+    </div>
+    <div class="fgrid cols2" style="margin-top:10px">
+      <div class="frow">
+        <label><span class="lnum">2b.</span>${t('l2bPhone')}</label>
+        <input type="tel" value="${esc(ci.empPhone)}" oninput="currentInterview.empPhone=this.value">
+      </div>
+      <div class="frow">
+        <label><span class="lnum">2b.</span>${t('l2bEmail')}</label>
+        <input type="email" value="${esc(ci.empEmail)}" oninput="currentInterview.empEmail=this.value">
+      </div>
+    </div>
+    <div class="fgrid cols2" style="margin-top:10px">
+      <div class="frow">
+        <label><span class="lnum">2c.</span>${t('l2c')}</label>
+        <textarea oninput="currentInterview.empAddress=this.value" style="min-height:52px">${esc(ci.empAddress)}</textarea>
+      </div>
+      <div class="frow">
+        <label><span class="lnum">2d.</span>${t('l2d')}</label>
+        <div class="yn-group" style="margin-top:6px">
+          ${ynRadio('empIdVerified', t('yes'), 'yes', ci.empIdVerified)}
+          ${ynRadio('empIdVerified', t('no'), 'no', ci.empIdVerified)}
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- WORK & PAY -->
+<div class="fsec">
+  <div class="fsec-head">${t('secWork')}</div>
+  <div class="fsec-body">
+    <div class="fgrid cols3">
+      <div class="frow">
+        <label><span class="lnum">3a.</span>${t('l3a')}</label>
+        <input type="text" value="${esc(ci.timeOnJob)}" oninput="currentInterview.timeOnJob=this.value">
+      </div>
+      <div class="frow">
+        <label><span class="lnum">3b.</span>${t('l3b')}</label>
+        <input type="date" value="${esc(ci.lastDate)}" oninput="currentInterview.lastDate=this.value">
+      </div>
+      <div class="frow">
+        <label><span class="lnum">3c.</span>${t('l3c')}</label>
+        <input type="text" value="${esc(ci.hoursLastDay)}" oninput="currentInterview.hoursLastDay=this.value">
+      </div>
+    </div>
+    <div class="fgrid" style="margin-top:10px">
+      <div class="frow">
+        <label><span class="lnum">4a.</span>${t('l4a')}</label>
+        <input type="text" value="${esc(ci.hourlyRate)}" placeholder="$ 0.00" oninput="currentInterview.hourlyRate=this.value" style="max-width:180px">
+      </div>
+    </div>
+    <!-- Fringe -->
+    <div style="margin-top:14px">
+      <div class="yn-label"><span class="lnum" style="color:var(--amber)">4b.</span> ${t('l4b')}</div>
+      <div class="fringe-grid" style="margin-top:8px">
+        <div>
+          <div class="yn-label" style="font-size:.75rem;margin-bottom:4px">${t('l4bMed')}</div>
+          <div class="yn-group">
+            ${ynRadio('fringeMedical', t('yes'), 'yes', ci.fringeMedical)}
+            ${ynRadio('fringeMedical', t('no'), 'no', ci.fringeMedical)}
+          </div>
+        </div>
+        <div>
+          <div class="yn-label" style="font-size:.75rem;margin-bottom:4px">${t('l4bPen')}</div>
+          <div class="yn-group">
+            ${ynRadio('fringePension', t('yes'), 'yes', ci.fringePension)}
+            ${ynRadio('fringePension', t('no'), 'no', ci.fringePension)}
+          </div>
+        </div>
+        <div>
+          <div class="yn-label" style="font-size:.75rem;margin-bottom:4px"><span style="color:var(--amber)">4c.</span> ${t('l4c')}</div>
+          <div class="freq-group">
+            ${freqRadio('payFrequency', t('weekly'), 'weekly', ci.payFrequency)}
+            ${freqRadio('payFrequency', t('biweekly'), 'biweekly', ci.payFrequency)}
+            ${freqRadio('payFrequency', t('semimonthly'), 'semimonthly', ci.payFrequency)}
+            ${freqRadio('payFrequency', t('other'), 'other', ci.payFrequency)}
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- CLASSIFICATION -->
+<div class="fsec">
+  <div class="fsec-head">${t('secClass')}</div>
+  <div class="fsec-body fgrid">
+    <div class="frow">
+      <label><span class="lnum">5.</span>${t('l5')}</label>
+      <textarea oninput="currentInterview.classifications=this.value">${esc(ci.classifications)}</textarea>
+    </div>
+    <div class="frow">
+      <label><span class="lnum">6.</span>${t('l6')}</label>
+      <textarea oninput="currentInterview.duties=this.value">${esc(ci.duties)}</textarea>
+    </div>
+    <div class="frow">
+      <label><span class="lnum">7.</span>${t('l7')}</label>
+      <textarea oninput="currentInterview.tools=this.value">${esc(ci.tools)}</textarea>
+    </div>
+  </div>
+</div>
+
+<!-- QUESTIONS 8-11 -->
+<div class="fsec">
+  <div class="fsec-head">${t('secQA')}</div>
+  <div class="fsec-body">
+    <div class="qgrid">
+      <div class="qblock">
+        <div class="qlabel"><strong>8.</strong> ${t('l8')}</div>
+        <div class="yn-group">
+          ${ynRadio('apprentice', t('yes'), 'yes', ci.apprentice)}
+          ${ynRadio('apprentice', t('no'), 'no', ci.apprentice)}
+        </div>
+      </div>
+      <div class="qblock">
+        <div class="qlabel"><strong>8a.</strong> ${t('l8a')}</div>
+        <div class="yn-group">
+          ${ynRadio('apprenticeCert', t('yes'), 'yes', ci.apprenticeCert)}
+          ${ynRadio('apprenticeCert', t('no'), 'no', ci.apprenticeCert)}
+        </div>
+      </div>
+      <div class="qblock">
+        <div class="qlabel"><strong>9.</strong> ${t('l9')}</div>
+        <div class="yn-group">
+          ${ynRadio('paidAllHours', t('yes'), 'yes', ci.paidAllHours)}
+          ${ynRadio('paidAllHours', t('no'), 'no', ci.paidAllHours)}
+        </div>
+      </div>
+      <div class="qblock">
+        <div class="qlabel"><strong>10.</strong> ${t('l10')}</div>
+        <div class="yn-group">
+          ${ynRadio('overtime', t('yes'), 'yes', ci.overtime)}
+          ${ynRadio('overtime', t('no'), 'no', ci.overtime)}
+        </div>
+      </div>
+      <div class="qblock" style="grid-column:1/-1">
+        <div class="qlabel"><strong>11.</strong> ${t('l11')}</div>
+        <div class="yn-group">
+          ${ynRadio('threatened', t('yes'), 'yes', ci.threatened)}
+          ${ynRadio('threatened', t('no'), 'no', ci.threatened)}
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- EMPLOYEE SIGNATURE -->
+<div class="fsec">
+  <div class="fsec-head">${t('secEmpSig')}</div>
+  <div class="fsec-body">
+    <div class="fgrid cols2">
+      <div class="frow">
+        <label><span class="lnum">12a.</span>${t('l12a')}</label>
+        ${renderSigPad('empSignature', ci.empSignature)}
+      </div>
+      <div class="frow">
+        <label><span class="lnum">12b.</span>${t('l12b')}</label>
+        <input type="date" value="${esc(ci.empSignDate)}" oninput="currentInterview.empSignDate=this.value">
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- OBSERVATIONS -->
+<div class="fsec">
+  <div class="fsec-head">${t('secObserved')}</div>
+  <div class="fsec-body fgrid">
+    <div class="frow">
+      <label><span class="lnum">13.</span>${t('l13')}</label>
+      <textarea style="min-height:90px" oninput="currentInterview.observedDuties=this.value">${esc(ci.observedDuties)}</textarea>
+    </div>
+    <div class="frow">
+      <label><span class="lnum">14.</span>${t('l14')}</label>
+      <textarea style="min-height:70px" oninput="currentInterview.remarks=this.value">${esc(ci.remarks)}</textarea>
+    </div>
+  </div>
+</div>
+
+<!-- INTERVIEWER -->
+<div class="fsec">
+  <div class="fsec-head">${t('secItvSig')}</div>
+  <div class="fsec-body">
+    <div class="fgrid cols3">
+      <div class="frow">
+        <label><span class="lnum">15a.</span>${t('l15a')}</label>
+        <input type="text" value="${esc(ci.interviewerName)}" oninput="currentInterview.interviewerName=this.value">
+      </div>
+      <div class="frow">
+        <label><span class="lnum">15b.</span>${t('l15b')}</label>
+        ${renderSigPad('interviewerSignature', ci.interviewerSignature)}
+      </div>
+      <div class="frow">
+        <label><span class="lnum">15c.</span>${t('l15c')}</label>
+        <input type="date" value="${esc(ci.interviewDate)}" oninput="currentInterview.interviewDate=this.value">
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- PAYROLL EXAMINATION -->
+<div class="fsec">
+  <div class="fsec-head">${t('secPayroll')}</div>
+  <div class="fsec-body">
+    <div class="payroll-notice">${t('payrollNotice')}</div>
+  </div>
+</div>
+
+<!-- ADDITIONAL REMARKS -->
+<div class="fsec">
+  <div class="fsec-head">${t('secAddl')}</div>
+  <div class="fsec-body fgrid">
+    <div class="frow">
+      <label><span class="lnum">18.</span>${t('l18')}</label>
+      <textarea style="min-height:100px" oninput="currentInterview.additionalRemarks=this.value">${esc(ci.additionalRemarks)}</textarea>
+    </div>
+  </div>
+</div>
+
+<div style="padding:20px 0;text-align:center;">
+  <button class="btn-primary" style="margin:0 8px;min-width:140px" onclick="saveInterview()">Save Interview</button>
+  <button class="btn-secondary" style="margin:0 8px;min-width:140px" onclick="triggerPrint(currentInterview.id)">Print / Save PDF</button>
+</div>
+`;
+  // Restore canvas signatures
+  restoreSig('empSignature', ci.empSignature);
+  restoreSig('interviewerSignature', ci.interviewerSignature);
+  // Init all canvases
+  document.querySelectorAll('canvas[data-sigkey]').forEach(c => initCanvas(c));
+}
+
+// ── RADIO HELPERS ─────────────────────────────────────────────────
+function ynRadio(field, label, val, current) {
+  const chk = current === val ? 'checked' : '';
+  return `<label class="yn-opt"><input type="radio" name="${field}" value="${val}" ${chk} onchange="currentInterview['${field}']=this.value"> ${label}</label>`;
+}
+function freqRadio(field, label, val, current) {
+  const chk = current === val ? 'checked' : '';
+  return `<label class="freq-opt"><input type="radio" name="${field}" value="${val}" ${chk} onchange="currentInterview['${field}']=this.value"> ${label}</label>`;
+}
+
+// ── SIGNATURE PAD ─────────────────────────────────────────────────
+function renderSigPad(key, existing) {
+  return `
+    <div class="sig-wrap" style="height:70px">
+      <canvas class="sig-canvas" data-sigkey="${key}" height="70"></canvas>
+    </div>
+    <div class="sig-controls">
+      <button class="sig-btn" onclick="clearSig('${key}')">${t('clearSig')}</button>
+    </div>`;
+}
+
+function initCanvas(canvas) {
+  const key = canvas.dataset.sigkey;
+  canvas.width = canvas.offsetWidth || canvas.parentElement.offsetWidth || 300;
+  let drawing = false, lx = 0, ly = 0;
+  const ctx = canvas.getContext('2d');
+  ctx.strokeStyle = '#000';
+  ctx.lineWidth = 2;
+  ctx.lineCap = 'round';
+  ctx.lineJoin = 'round';
+
+  function pos(e) {
+    const r = canvas.getBoundingClientRect();
+    const src = e.touches ? e.touches[0] : e;
+    return { x: (src.clientX - r.left) * (canvas.width / r.width), y: (src.clientY - r.top) * (canvas.height / r.height) };
+  }
+  function start(e) { e.preventDefault(); drawing = true; const p = pos(e); lx = p.x; ly = p.y; }
+  function move(e) {
+    if (!drawing) return; e.preventDefault();
+    const p = pos(e);
+    ctx.beginPath(); ctx.moveTo(lx, ly); ctx.lineTo(p.x, p.y); ctx.stroke();
+    lx = p.x; ly = p.y;
+  }
+  function end(e) {
+    if (!drawing) return;
+    drawing = false;
+    currentInterview[key] = canvas.toDataURL('image/png');
+  }
+  canvas.addEventListener('mousedown', start);
+  canvas.addEventListener('mousemove', move);
+  canvas.addEventListener('mouseup', end);
+  canvas.addEventListener('mouseleave', end);
+  canvas.addEventListener('touchstart', start, {passive:false});
+  canvas.addEventListener('touchmove', move, {passive:false});
+  canvas.addEventListener('touchend', end);
+}
+
+function restoreSig(key, dataUrl) {
+  if (!dataUrl) return;
+  const canvas = document.querySelector(`canvas[data-sigkey="${key}"]`);
+  if (!canvas) return;
+  const img = new Image();
+  img.onload = () => {
+    canvas.width = canvas.offsetWidth || canvas.parentElement.offsetWidth || 300;
+    canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height);
+  };
+  img.src = dataUrl;
+}
+
+function clearSig(key) {
+  const canvas = document.querySelector(`canvas[data-sigkey="${key}"]`);
+  if (canvas) { canvas.getContext('2d').clearRect(0, 0, canvas.width, canvas.height); }
+  currentInterview[key] = '';
+}
+
+// ── PRINT ─────────────────────────────────────────────────────────
+function triggerPrint(id) {
+  autoSave();
+  const all = getAll();
+  const iv = id ? all.find(i => i.id === id) : currentInterview;
+  if (!iv) return;
+  if (!printTipShown) {
+    document.getElementById('printModal').style.display = 'flex';
+    window._pendingPrintIv = iv;
+  } else {
+    buildAndPrint(iv);
+  }
+}
+function printInterview(id) { triggerPrint(id); }
+window.confirmPrint = function() {
+  printTipShown = true;
+  localStorage.setItem('hud11_print_tip', '1');
+  document.getElementById('printModal').style.display = 'none';
+  buildAndPrint(window._pendingPrintIv);
+};
+
+function yn(val, yesLabel, noLabel) {
+  const y = val === 'yes' || val === 'Sí' || val === 'Yes';
+  const n = val === 'no' || val === 'No';
+  return `
+    <span style="margin-right:8pt"><span style="display:inline-block;width:9pt;height:9pt;border:1pt solid #000;background:${y?'#000':'#fff'};vertical-align:middle;margin-right:2pt;"></span> ${yesLabel}</span>
+    <span><span style="display:inline-block;width:9pt;height:9pt;border:1pt solid #000;background:${n?'#000':'#fff'};vertical-align:middle;margin-right:2pt;"></span> ${noLabel}</span>`;
+}
+function freq(iv) {
+  const f = iv.payFrequency;
+  const s = STRINGS[iv.lang||'en'];
+  return ['weekly','biweekly','semimonthly','other'].map(k =>
+    `<div><span style="display:inline-block;width:9pt;height:9pt;border:1pt solid #000;background:${f===k?'#000':'#fff'};vertical-align:middle;margin-right:3pt;"></span>${s[k]||k}</div>`
+  ).join('');
+}
+function sigImg(dataUrl) {
+  if (!dataUrl) return '<span style="display:block;border-bottom:1pt solid #000;min-height:28pt;"></span>';
+  return `<img src="${dataUrl}" style="max-height:30pt;max-width:100%;">`;
+}
+
+function buildAndPrint(iv) {
+  const s = STRINGS[iv.lang||'en'];
+  const pa = document.getElementById('printArea');
+
+  pa.innerHTML = `
+<div class="pr-page">
+  <!-- HUD Header -->
+  <table class="pr-table" style="margin-bottom:0">
+    <tr>
+      <td style="width:55%;border:none;padding:0 0 4pt 0;vertical-align:top">
+        <div style="font-size:13pt;font-weight:bold;line-height:1.2">${s.formTitle}</div>
+      </td>
+      <td style="border:none;padding:0 0 4pt 0;vertical-align:top;text-align:right;font-size:7.5pt;line-height:1.5">
+        ${s.agencyTitle.replace('\n','<br>')}
+        <br><strong>${s.omb.replace('\n','<br>')}</strong>
+      </td>
+    </tr>
+  </table>
+
+  <!-- Row 1: 1a + 2a -->
+  <table class="pr-table">
+    <tr>
+      <td style="width:50%">
+        <span class="pr-field-label">1a. ${s.l1a}</span>
+        <span class="pr-field-val">${esc(iv.projectName)}</span>
+      </td>
+      <td>
+        <span class="pr-field-label">2a. ${s.l2a}</span>
+        <span class="pr-field-val">${esc(iv.empName)}</span>
+      </td>
+    </tr>
+    <!-- Row 2: 1b + 2b -->
+    <tr>
+      <td>
+        <span class="pr-field-label">1b. ${s.l1b}</span>
+        <span class="pr-field-val">${esc(iv.projectNumber)}</span>
+      </td>
+      <td>
+        <span class="pr-field-label">2b. ${s.l2b}</span>
+        <span class="pr-field-val">${esc(iv.empPhone)}${iv.empPhone&&iv.empEmail?' &nbsp;|&nbsp; ':''}${esc(iv.empEmail)}</span>
+      </td>
+    </tr>
+    <!-- Row 3: 1c + 2c -->
+    <tr>
+      <td rowspan="2" style="vertical-align:top">
+        <span class="pr-field-label">1c. ${s.l1c}</span>
+        <span class="pr-field-val" style="min-height:28pt;display:block">${esc(iv.contractor)}</span>
+      </td>
+      <td>
+        <span class="pr-field-label">2c. ${s.l2c}</span>
+        <span class="pr-field-val" style="min-height:20pt;display:block">${esc(iv.empAddress)}</span>
+      </td>
+    </tr>
+    <!-- Row 4: (1c continued) + 2d -->
+    <tr>
+      <td>
+        <span class="pr-field-label">2d. ${s.l2d}</span>
+        <div style="margin-top:3pt">${yn(iv.empIdVerified, s.yes, s.no)}</div>
+      </td>
+    </tr>
+    <!-- Row 5: 3a 3b 3c 4a -->
+    <tr>
+      <td colspan="2">
+        <table style="width:100%;border-collapse:collapse">
+          <tr>
+            <td style="border:none;border-right:1pt solid #000;padding:3pt 4pt;width:25%;vertical-align:top">
+              <span class="pr-field-label">3a. ${s.l3a}</span>
+              <span class="pr-field-val" style="min-height:24pt;display:block">${esc(iv.timeOnJob)}</span>
+            </td>
+            <td style="border:none;border-right:1pt solid #000;padding:3pt 4pt;width:25%;vertical-align:top">
+              <span class="pr-field-label">3b. ${s.l3b}</span>
+              <span class="pr-field-val">${esc(iv.lastDate)}</span>
+            </td>
+            <td style="border:none;border-right:1pt solid #000;padding:3pt 4pt;width:25%;vertical-align:top">
+              <span class="pr-field-label">3c. ${s.l3c}</span>
+              <span class="pr-field-val">${esc(iv.hoursLastDay)}</span>
+            </td>
+            <td style="border:none;padding:3pt 4pt;width:25%;vertical-align:top">
+              <span class="pr-field-label">4a. ${s.l4a}</span>
+              <span class="pr-field-val">${esc(iv.hourlyRate)}</span>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+    <!-- Row 6: 4b + 4c -->
+    <tr>
+      <td colspan="2">
+        <table style="width:100%;border-collapse:collapse">
+          <tr>
+            <td style="border:none;border-right:1pt solid #000;padding:3pt 4pt;width:66%;vertical-align:top">
+              <span class="pr-field-label">4b. ${s.l4b}</span>
+              <div style="display:flex;gap:20pt;margin-top:3pt">
+                <div><em style="font-size:7.5pt">${s.l4bMed}</em><br>${yn(iv.fringeMedical, s.yes, s.no)}</div>
+                <div><em style="font-size:7.5pt">${s.l4bPen}</em><br>${yn(iv.fringePension, s.yes, s.no)}</div>
+              </div>
+            </td>
+            <td style="border:none;padding:3pt 4pt;vertical-align:top">
+              <span class="pr-field-label">4c. ${s.l4c}</span>
+              <div style="margin-top:3pt;font-size:7.5pt">${freq(iv)}</div>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+    <!-- 5 Classification -->
+    <tr>
+      <td colspan="2">
+        <span class="pr-field-label">5. ${s.l5}</span>
+        <span class="pr-field-val pr-tall" style="min-height:32pt;display:block">${esc(iv.classifications)}</span>
+      </td>
+    </tr>
+    <!-- 6 Duties -->
+    <tr>
+      <td colspan="2">
+        <span class="pr-field-label">6. ${s.l6}</span>
+        <span class="pr-field-val pr-tall" style="min-height:32pt;display:block">${esc(iv.duties)}</span>
+      </td>
+    </tr>
+    <!-- 7 Tools -->
+    <tr>
+      <td colspan="2">
+        <span class="pr-field-label">7. ${s.l7}</span>
+        <span class="pr-field-val" style="min-height:22pt;display:block">${esc(iv.tools)}</span>
+      </td>
+    </tr>
+    <!-- 8 / 8a / 10 -->
+    <tr>
+      <td colspan="2">
+        <table style="width:100%;border-collapse:collapse">
+          <tr>
+            <td style="border:none;border-right:1pt solid #000;padding:3pt 4pt;width:25%;vertical-align:top">
+              <span class="pr-field-label" style="font-size:6.5pt">Y &nbsp; N</span>
+              <div style="font-size:7.5pt;margin-bottom:3pt"><strong>8.</strong> ${s.l8}</div>
+              ${yn(iv.apprentice, s.yes, s.no)}
+            </td>
+            <td style="border:none;border-right:1pt solid #000;padding:3pt 4pt;width:25%;vertical-align:top">
+              <span class="pr-field-label" style="font-size:6.5pt">Y &nbsp; N</span>
+              <div style="font-size:7.5pt;margin-bottom:3pt"><strong>8a.</strong> ${s.l8a}</div>
+              ${yn(iv.apprenticeCert, s.yes, s.no)}
+            </td>
+            <td style="border:none;padding:3pt 4pt;width:50%;vertical-align:top">
+              <div style="font-size:7.5pt;margin-bottom:3pt"><strong>10.</strong> ${s.l10}</div>
+              ${yn(iv.overtime, s.yes, s.no)}
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+    <!-- 9 / 11 -->
+    <tr>
+      <td colspan="2">
+        <table style="width:100%;border-collapse:collapse">
+          <tr>
+            <td style="border:none;border-right:1pt solid #000;padding:3pt 4pt;width:50%;vertical-align:top">
+              <div style="font-size:7.5pt;margin-bottom:3pt"><strong>9.</strong> ${s.l9}</div>
+              ${yn(iv.paidAllHours, s.yes, s.no)}
+            </td>
+            <td style="border:none;padding:3pt 4pt;width:50%;vertical-align:top">
+              <div style="font-size:7.5pt;margin-bottom:3pt"><strong>11.</strong> ${s.l11}</div>
+              ${yn(iv.threatened, s.yes, s.no)}
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+    <!-- 12a / 12b -->
+    <tr>
+      <td colspan="2">
+        <table style="width:100%;border-collapse:collapse">
+          <tr>
+            <td style="border:none;border-right:1pt solid #000;padding:3pt 4pt;width:65%;vertical-align:top">
+              <span class="pr-field-label">12a. ${s.l12a}</span>
+              <div style="min-height:32pt">${sigImg(iv.empSignature)}</div>
+            </td>
+            <td style="border:none;padding:3pt 4pt;vertical-align:top">
+              <span class="pr-field-label">12b. ${s.l12b}</span>
+              <span class="pr-field-val">${esc(iv.empSignDate)}</span>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+    <!-- 13 Observed Duties -->
+    <tr>
+      <td colspan="2">
+        <span class="pr-field-label">13. ${s.l13}</span>
+        <span class="pr-field-val pr-xtall" style="min-height:52pt;display:block">${esc(iv.observedDuties)}</span>
+      </td>
+    </tr>
+    <!-- 14 Remarks -->
+    <tr>
+      <td colspan="2">
+        <span class="pr-field-label">14. ${s.l14}</span>
+        <span class="pr-field-val pr-tall" style="min-height:40pt;display:block">${esc(iv.remarks)}</span>
+      </td>
+    </tr>
+    <!-- 15a 15b 15c -->
+    <tr>
+      <td colspan="2">
+        <table style="width:100%;border-collapse:collapse">
+          <tr>
+            <td style="border:none;border-right:1pt solid #000;padding:3pt 4pt;width:33%;vertical-align:top">
+              <span class="pr-field-label">15a. ${s.l15a}</span>
+              <span class="pr-field-val">${esc(iv.interviewerName)}</span>
+            </td>
+            <td style="border:none;border-right:1pt solid #000;padding:3pt 4pt;width:33%;vertical-align:top">
+              <span class="pr-field-label">15b. ${s.l15b}</span>
+              <div style="min-height:28pt">${sigImg(iv.interviewerSignature)}</div>
+            </td>
+            <td style="border:none;padding:3pt 4pt;vertical-align:top">
+              <span class="pr-field-label">15c. ${s.l15c}</span>
+              <span class="pr-field-val">${esc(iv.interviewDate)}</span>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+    <!-- Payroll Section Header -->
+    <tr>
+      <td colspan="2" style="background:#ddd;padding:3pt 4pt">
+        <strong style="font-size:8pt">${(iv.lang||'en')==='es'?'Examinación de Nómina':'Payroll Examination'}</strong>
+      </td>
+    </tr>
+    <!-- 16 Payroll Remarks -->
+    <tr>
+      <td colspan="2">
+        <span class="pr-field-label">16. ${s.l16}</span>
+        <span class="pr-field-val pr-xtall" style="min-height:52pt;display:block"></span>
+      </td>
+    </tr>
+    <!-- 17a / 17b -->
+    <tr>
+      <td colspan="2">
+        <table style="width:100%;border-collapse:collapse">
+          <tr>
+            <td style="border:none;border-right:1pt solid #000;padding:3pt 4pt;width:65%;vertical-align:top">
+              <span class="pr-field-label">17a. ${s.l17a}</span>
+              <span style="display:block;border-bottom:1pt solid #000;min-height:28pt;"></span>
+            </td>
+            <td style="border:none;padding:3pt 4pt;vertical-align:top">
+              <span class="pr-field-label">17b. ${s.l17b}</span>
+              <span class="pr-field-val"></span>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+  <div class="pr-page-footer"></div>
+</div>
+
+<!-- PAGE 3 — Additional Remarks -->
+<div class="pr-addl-page">
+  <table class="pr-table" style="margin-bottom:0">
+    <tr>
+      <td style="width:55%;border:none;padding:0 0 4pt 0;vertical-align:top">
+        <div style="font-size:13pt;font-weight:bold;line-height:1.2">${s.formTitle}</div>
+      </td>
+      <td style="border:none;padding:0 0 4pt 0;vertical-align:top;text-align:right;font-size:7.5pt;line-height:1.5">
+        ${s.agencyTitle.replace('\n','<br>')}
+        <br><strong>${s.omb.replace('\n','<br>')}</strong>
+      </td>
+    </tr>
+  </table>
+  <table class="pr-table">
+    <tr>
+      <td>
+        <span class="pr-field-label">18. ${s.l18}</span>
+        <span class="pr-field-val" style="min-height:480pt;display:block">${esc(iv.additionalRemarks)}</span>
+      </td>
+    </tr>
+  </table>
+  <div class="pr-page-footer"></div>
+</div>
+`;
+
+  // Build smart filename: Doe,John_Villa Construction-Employee Interview-20260309
+  function buildFilename(iv) {
+    const rawName = (iv.empName || 'Unknown').trim();
+    const parts = rawName.split(/\s+/);
+    const last = parts.length > 1 ? parts[parts.length - 1] : parts[0];
+    const first = parts.length > 1 ? parts.slice(0, parts.length - 1).join(' ') : '';
+    const namePart = first ? last + ',' + first : last;
+    const company = (iv.contractor || '').trim();
+    const dateStr = (iv.interviewDate || '').replace(/-/g, '');
+    const label = (iv.lang || 'en') === 'es' ? 'Historial de Entrevista' : 'Employee Interview';
+    let filename = namePart;
+    if (company) filename += '_' + company;
+    filename += '-' + label;
+    if (dateStr) filename += '-' + dateStr;
+    return filename;
+  }
+
+  const prevTitle = document.title;
+  document.title = buildFilename(iv);
+
+  // Show print area, hide UI, print, restore
+  document.getElementById('dashboard').style.display = 'none';
+  document.getElementById('formView').style.display = 'none';
+  pa.style.display = 'block';
+  setTimeout(() => {
+    window.print();
+    document.title = prevTitle;
+    pa.style.display = 'none';
+    // Restore whichever view was showing
+    if (currentInterview) {
+      document.getElementById('formView').style.display = 'flex';
+    } else {
+      document.getElementById('dashboard').style.display = 'flex';
+    }
+  }, 200);
+}
+
+// ── TOAST ─────────────────────────────────────────────────────────
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2400);
+}
+
+// ── INIT ──────────────────────────────────────────────────────────
+renderDashboard();
+</script>
+</body>
+</html>
