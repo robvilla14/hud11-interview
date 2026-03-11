@@ -133,11 +133,11 @@ textarea { resize: vertical; min-height: 70px; line-height: 1.5; }
 /* ── PRINT STYLES ─────────────────────────────────────────────── */
 @media print {
   * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-  html, body { background: #fff !important; color: #000 !important; font-size: 9.5pt; font-family: Arial, sans-serif; }
+  html, body { background: #fff !important; color: #000 !important; font-size: 8pt; font-family: Arial, sans-serif; }
   #dashboard, #formView, #toast, .sheet-overlay { display: none !important; }
   #printArea { display: block !important; }
 
-  @page { size: letter; margin: .5in .5in .4in; }
+  @page { size: letter; margin: .38in .45in .35in; }
 
   .pr-page { page-break-after: always; }
   .pr-page:last-child { page-break-after: avoid; }
@@ -150,16 +150,16 @@ textarea { resize: vertical; min-height: 70px; line-height: 1.5; }
 
   /* Grid table */
   .pr-table { width: 100%; border-collapse: collapse; margin-bottom: 0; }
-  .pr-table td, .pr-table th { border: 1px solid #000; padding: 3pt 4pt; vertical-align: top; font-size: 8.5pt; }
-  .pr-field-label { font-size: 7pt; font-weight: bold; display: block; margin-bottom: 2pt; }
-  .pr-field-val { font-size: 8.5pt; min-height: 14pt; display: block; }
+  .pr-table td, .pr-table th { border: 1px solid #000; padding: 2pt 3pt; vertical-align: top; font-size: 7.5pt; }
+  .pr-field-label { font-size: 6pt; font-weight: bold; display: block; margin-bottom: 1pt; }
+  .pr-field-val { font-size: 7.5pt; min-height: 11pt; display: block; }
   .pr-yn-row { display: flex; gap: 8pt; align-items: center; }
   .pr-yn-box { display: inline-block; width: 9pt; height: 9pt; border: 1pt solid #000; vertical-align: middle; margin-right: 2pt; }
   .pr-yn-box.checked { background: #000; }
-  .pr-sig-img { max-height: 30pt; max-width: 100%; }
-  .pr-sig-line { border-bottom: 1pt solid #000; min-height: 28pt; display: block; }
-  .pr-tall { min-height: 48pt; }
-  .pr-xtall { min-height: 72pt; }
+  .pr-sig-img { max-height: 22pt; max-width: 100%; }
+  .pr-sig-line { border-bottom: 1pt solid #000; min-height: 20pt; display: block; }
+  .pr-tall { min-height: 28pt; }
+  .pr-xtall { min-height: 36pt; }
   .pr-section-title { font-weight: bold; font-size: 8pt; background: #ddd; padding: 2pt 4pt; }
   .pr-payroll-section { background: #f0f0f0; }
   .pr-footer { font-size: 6.5pt; margin-top: 4pt; text-align: right; color: #555; }
@@ -210,12 +210,13 @@ textarea { resize: vertical; min-height: 70px; line-height: 1.5; }
       <button class="btn-secondary" onclick="openInstructions()">📋 Instructions</button>
     </div>
 
-    <!-- Export/Import -->
+    <!-- Export/Import/Clear -->
     <div style="display:flex;gap:10px;margin-bottom:24px;">
       <button class="btn-secondary" style="flex:1;padding:9px;" onclick="exportAll()">↓ Export Backup</button>
       <label class="btn-secondary" style="flex:1;padding:9px;text-align:center;cursor:pointer;">
         ↑ Import Backup<input type="file" accept=".json" style="display:none" onchange="importAll(event)">
       </label>
+      <button class="btn-secondary" style="flex:1;padding:9px;border-color:var(--red);color:var(--red);" onclick="clearAll()">🗑 Clear All</button>
     </div>
 
     <!-- Interview list -->
@@ -355,7 +356,9 @@ const STRINGS = {
     l17a: 'Signature of Payroll Examiner',
     l17b: 'Date',
     l18: 'Additional Remarks',
-    yes: 'Yes', no: 'No',
+    yes: 'Yes', no: 'No', na: 'N/A',
+    l8aPhoto: 'Apprenticeship Certificate Photo (optional)',
+    l8aPhotoHint: 'Tap to attach a photo of the certificate',
     weekly: 'Weekly', biweekly: 'Biweekly', semimonthly: 'Semi-monthly', other: 'Other',
     payrollNotice: 'This section is completed by the Payroll Examiner after comparing this form against certified payroll reports. Leave blank when printing.',
     clearSig: 'Clear', typeSig: 'Type Name',
@@ -432,7 +435,9 @@ const STRINGS = {
     l17a: 'Firma del Examinador de Nómina',
     l17b: 'Fecha',
     l18: 'Comentarios Adicionales',
-    yes: 'Sí', no: 'No',
+    yes: 'Sí', no: 'No', na: 'N/A',
+    l8aPhoto: 'Foto del Certificado de Aprendizaje (opcional)',
+    l8aPhotoHint: 'Toque para adjuntar una foto del certificado',
     weekly: 'Semanal', biweekly: 'Quincenal', semimonthly: 'Semimensual', other: 'Otro',
     payrollNotice: 'Esta sección es completada por el Examinador de Nómina al comparar este formulario con los informes de nómina certificados. Dejar en blanco al imprimir.',
     clearSig: 'Limpiar', typeSig: 'Escribir Nombre',
@@ -479,7 +484,7 @@ function blankInterview() {
     timeOnJob: '', lastDate: '', hoursLastDay: '',
     hourlyRate: '', fringeMedical: '', fringePension: '', payFrequency: '',
     classifications: '', duties: '', tools: '',
-    apprentice: '', apprenticeCert: '', paidAllHours: '', overtime: '', threatened: '',
+    apprentice: '', apprenticeCert: '', apprenticeCertPhoto: '', paidAllHours: '', overtime: '', threatened: '',
     empSignature: '', empSignDate: '',
     observedDuties: '', remarks: '',
     interviewerName: '', interviewerSignature: '', interviewDate: '',
@@ -660,6 +665,15 @@ function importAll(evt) {
   evt.target.value = '';
 }
 
+function clearAll() {
+  const all = getAll();
+  if (!all.length) { showToast('No interviews to clear.'); return; }
+  if (!confirm('Delete ALL ' + all.length + ' saved interview(s)? This cannot be undone.')) return;
+  saveAll([]);
+  renderDashboard();
+  showToast('All interviews deleted.');
+}
+
 // ── LANGUAGE ──────────────────────────────────────────────────────
 function setLang(lang) {
   currentLang = lang;
@@ -823,16 +837,26 @@ function renderForm() {
       <div class="qblock">
         <div class="qlabel"><strong>8.</strong> ${t('l8')}</div>
         <div class="yn-group">
-          ${ynRadio('apprentice', t('yes'), 'yes', ci.apprentice)}
-          ${ynRadio('apprentice', t('no'), 'no', ci.apprentice)}
+          ${ynRadioRender('apprentice', t('yes'), 'yes', ci.apprentice)}
+          ${ynRadioRender('apprentice', t('no'), 'no', ci.apprentice)}
         </div>
       </div>
-      <div class="qblock">
+      <div class="qblock" id="qblock8a">
         <div class="qlabel"><strong>8a.</strong> ${t('l8a')}</div>
         <div class="yn-group">
-          ${ynRadio('apprenticeCert', t('yes'), 'yes', ci.apprenticeCert)}
-          ${ynRadio('apprenticeCert', t('no'), 'no', ci.apprenticeCert)}
+          ${ci.apprentice === 'no' ? ynRadio('apprenticeCert', t('na'), 'na', ci.apprenticeCert) : ''}
+          ${ci.apprentice !== 'no' ? ynRadio('apprenticeCert', t('yes'), 'yes', ci.apprenticeCert) : ''}
+          ${ci.apprentice !== 'no' ? ynRadio('apprenticeCert', t('no'), 'no', ci.apprenticeCert) : ''}
         </div>
+        ${ci.apprentice === 'yes' ? `<div style="margin-top:10px">
+          <div class="yn-label" style="font-size:.72rem;margin-bottom:6px">${t('l8aPhoto')}</div>
+          ${ci.apprenticeCertPhoto ? `<div style="position:relative;display:inline-block">
+            <img src="${ci.apprenticeCertPhoto}" style="max-height:80px;border-radius:4px;border:1px solid var(--navy3)">
+            <button onclick="currentInterview.apprenticeCertPhoto='';renderForm()" style="position:absolute;top:-6px;right:-6px;background:var(--red);color:#fff;border:none;border-radius:50%;width:18px;height:18px;font-size:.65rem;cursor:pointer;line-height:1">✕</button>
+          </div>` : `<label style="display:inline-flex;align-items:center;gap:8px;background:var(--navy3);border:1px dashed var(--amber);border-radius:6px;padding:8px 12px;cursor:pointer;font-size:.8rem;color:var(--amber)">
+            📎 ${t('l8aPhotoHint')}<input type="file" accept="image/*" capture="environment" style="display:none" onchange="attachCertPhoto(event)">
+          </label>`}
+        </div>` : ''}
       </div>
       <div class="qblock">
         <div class="qlabel"><strong>9.</strong> ${t('l9')}</div>
@@ -862,16 +886,14 @@ function renderForm() {
 <!-- EMPLOYEE SIGNATURE -->
 <div class="fsec">
   <div class="fsec-head">${t('secEmpSig')}</div>
-  <div class="fsec-body">
-    <div class="fgrid cols2">
-      <div class="frow">
-        <label><span class="lnum">12a.</span>${t('l12a')}</label>
-        ${renderSigPad('empSignature', ci.empSignature)}
-      </div>
-      <div class="frow">
-        <label><span class="lnum">12b.</span>${t('l12b')}</label>
-        <input type="date" value="${esc(ci.empSignDate)}" oninput="currentInterview.empSignDate=this.value">
-      </div>
+  <div class="fsec-body fgrid">
+    <div class="frow">
+      <label><span class="lnum">12a.</span>${t('l12a')}</label>
+      ${renderSigPad('empSignature', ci.empSignature)}
+    </div>
+    <div class="frow" style="max-width:220px">
+      <label><span class="lnum">12b.</span>${t('l12b')}</label>
+      <input type="date" value="${esc(ci.empSignDate)}" oninput="currentInterview.empSignDate=this.value">
     </div>
   </div>
 </div>
@@ -894,20 +916,18 @@ function renderForm() {
 <!-- INTERVIEWER -->
 <div class="fsec">
   <div class="fsec-head">${t('secItvSig')}</div>
-  <div class="fsec-body">
-    <div class="fgrid cols3">
-      <div class="frow">
-        <label><span class="lnum">15a.</span>${t('l15a')}</label>
-        <input type="text" value="${esc(ci.interviewerName)}" oninput="currentInterview.interviewerName=this.value">
-      </div>
-      <div class="frow">
-        <label><span class="lnum">15b.</span>${t('l15b')}</label>
-        ${renderSigPad('interviewerSignature', ci.interviewerSignature)}
-      </div>
-      <div class="frow">
-        <label><span class="lnum">15c.</span>${t('l15c')}</label>
-        <input type="date" value="${esc(ci.interviewDate)}" oninput="currentInterview.interviewDate=this.value">
-      </div>
+  <div class="fsec-body fgrid">
+    <div class="frow">
+      <label><span class="lnum">15a.</span>${t('l15a')}</label>
+      <input type="text" value="${esc(ci.interviewerName)}" oninput="currentInterview.interviewerName=this.value">
+    </div>
+    <div class="frow">
+      <label><span class="lnum">15b.</span>${t('l15b')}</label>
+      ${renderSigPad('interviewerSignature', ci.interviewerSignature)}
+    </div>
+    <div class="frow" style="max-width:220px">
+      <label><span class="lnum">15c.</span>${t('l15c')}</label>
+      <input type="date" value="${esc(ci.interviewDate)}" oninput="currentInterview.interviewDate=this.value">
     </div>
   </div>
 </div>
@@ -944,6 +964,11 @@ function renderForm() {
 }
 
 // ── RADIO HELPERS ─────────────────────────────────────────────────
+function ynRadioRender(field, label, val, current) {
+  // Like ynRadio but re-renders the form on change (used for item 8)
+  const chk = current === val ? 'checked' : '';
+  return `<label class="yn-opt"><input type="radio" name="${field}" value="${val}" ${chk} onchange="currentInterview['${field}']=this.value;renderForm()"> ${label}</label>`;
+}
 function ynRadio(field, label, val, current) {
   const chk = current === val ? 'checked' : '';
   return `<label class="yn-opt"><input type="radio" name="${field}" value="${val}" ${chk} onchange="currentInterview['${field}']=this.value"> ${label}</label>`;
@@ -951,6 +976,27 @@ function ynRadio(field, label, val, current) {
 function freqRadio(field, label, val, current) {
   const chk = current === val ? 'checked' : '';
   return `<label class="freq-opt"><input type="radio" name="${field}" value="${val}" ${chk} onchange="currentInterview['${field}']=this.value"> ${label}</label>`;
+}
+
+function attachCertPhoto(evt) {
+  const file = evt.target.files[0]; if (!file) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    // Resize to max 800px
+    const img = new Image();
+    img.onload = () => {
+      const max = 800;
+      let w = img.width, h = img.height;
+      if (w > max || h > max) { if (w > h) { h = Math.round(h * max/w); w = max; } else { w = Math.round(w * max/h); h = max; } }
+      const canvas = document.createElement('canvas');
+      canvas.width = w; canvas.height = h;
+      canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+      currentInterview.apprenticeCertPhoto = canvas.toDataURL('image/jpeg', 0.75);
+      renderForm();
+    };
+    img.src = e.target.result;
+  };
+  reader.readAsDataURL(file);
 }
 
 // ── SIGNATURE PAD ─────────────────────────────────────────────────
@@ -1067,10 +1113,10 @@ function buildAndPrint(iv) {
   <!-- HUD Header -->
   <table class="pr-table" style="margin-bottom:0">
     <tr>
-      <td style="width:55%;border:none;padding:0 0 4pt 0;vertical-align:top">
-        <div style="font-size:13pt;font-weight:bold;line-height:1.2">${s.formTitle}</div>
+      <td style="width:55%;border:none;padding:0 0 3pt 0;vertical-align:top">
+        <div style="font-size:11pt;font-weight:bold;line-height:1.2">${s.formTitle}</div>
       </td>
-      <td style="border:none;padding:0 0 4pt 0;vertical-align:top;text-align:right;font-size:7.5pt;line-height:1.5">
+      <td style="border:none;padding:0 0 3pt 0;vertical-align:top;text-align:right;font-size:6.5pt;line-height:1.4">
         ${s.agencyTitle.replace('\n','<br>')}
         <br><strong>${s.omb.replace('\n','<br>')}</strong>
       </td>
@@ -1108,7 +1154,7 @@ function buildAndPrint(iv) {
       </td>
       <td>
         <span class="pr-field-label">2c. ${s.l2c}</span>
-        <span class="pr-field-val" style="min-height:20pt;display:block">${esc(iv.empAddress)}</span>
+        <span class="pr-field-val" style="min-height:14pt;display:block">${esc(iv.empAddress)}</span>
       </td>
     </tr>
     <!-- Row 4: (1c continued) + 2d -->
@@ -1123,19 +1169,19 @@ function buildAndPrint(iv) {
       <td colspan="2">
         <table style="width:100%;border-collapse:collapse">
           <tr>
-            <td style="border:none;border-right:1pt solid #000;padding:3pt 4pt;width:25%;vertical-align:top">
+            <td style="border:none;border-right:1pt solid #000;padding:2pt 3pt;width:25%;vertical-align:top">
               <span class="pr-field-label">3a. ${s.l3a}</span>
-              <span class="pr-field-val" style="min-height:24pt;display:block">${esc(iv.timeOnJob)}</span>
+              <span class="pr-field-val" style="min-height:16pt;display:block">${esc(iv.timeOnJob)}</span>
             </td>
-            <td style="border:none;border-right:1pt solid #000;padding:3pt 4pt;width:25%;vertical-align:top">
+            <td style="border:none;border-right:1pt solid #000;padding:2pt 3pt;width:25%;vertical-align:top">
               <span class="pr-field-label">3b. ${s.l3b}</span>
               <span class="pr-field-val">${esc(iv.lastDate)}</span>
             </td>
-            <td style="border:none;border-right:1pt solid #000;padding:3pt 4pt;width:25%;vertical-align:top">
+            <td style="border:none;border-right:1pt solid #000;padding:2pt 3pt;width:25%;vertical-align:top">
               <span class="pr-field-label">3c. ${s.l3c}</span>
               <span class="pr-field-val">${esc(iv.hoursLastDay)}</span>
             </td>
-            <td style="border:none;padding:3pt 4pt;width:25%;vertical-align:top">
+            <td style="border:none;padding:2pt 3pt;width:25%;vertical-align:top">
               <span class="pr-field-label">4a. ${s.l4a}</span>
               <span class="pr-field-val">${esc(iv.hourlyRate)}</span>
             </td>
@@ -1148,16 +1194,16 @@ function buildAndPrint(iv) {
       <td colspan="2">
         <table style="width:100%;border-collapse:collapse">
           <tr>
-            <td style="border:none;border-right:1pt solid #000;padding:3pt 4pt;width:66%;vertical-align:top">
+            <td style="border:none;border-right:1pt solid #000;padding:2pt 3pt;width:66%;vertical-align:top">
               <span class="pr-field-label">4b. ${s.l4b}</span>
-              <div style="display:flex;gap:20pt;margin-top:3pt">
-                <div><em style="font-size:7.5pt">${s.l4bMed}</em><br>${yn(iv.fringeMedical, s.yes, s.no)}</div>
-                <div><em style="font-size:7.5pt">${s.l4bPen}</em><br>${yn(iv.fringePension, s.yes, s.no)}</div>
+              <div style="display:flex;gap:12pt;margin-top:2pt">
+                <div><em style="font-size:6.5pt">${s.l4bMed}</em><br>${yn(iv.fringeMedical, s.yes, s.no)}</div>
+                <div><em style="font-size:6.5pt">${s.l4bPen}</em><br>${yn(iv.fringePension, s.yes, s.no)}</div>
               </div>
             </td>
-            <td style="border:none;padding:3pt 4pt;vertical-align:top">
+            <td style="border:none;padding:2pt 3pt;vertical-align:top">
               <span class="pr-field-label">4c. ${s.l4c}</span>
-              <div style="margin-top:3pt;font-size:7.5pt">${freq(iv)}</div>
+              <div style="margin-top:2pt;font-size:6.5pt">${freq(iv)}</div>
             </td>
           </tr>
         </table>
@@ -1167,21 +1213,21 @@ function buildAndPrint(iv) {
     <tr>
       <td colspan="2">
         <span class="pr-field-label">5. ${s.l5}</span>
-        <span class="pr-field-val pr-tall" style="min-height:32pt;display:block">${esc(iv.classifications)}</span>
+        <span class="pr-field-val pr-tall" style="min-height:18pt;display:block">${esc(iv.classifications)}</span>
       </td>
     </tr>
     <!-- 6 Duties -->
     <tr>
       <td colspan="2">
         <span class="pr-field-label">6. ${s.l6}</span>
-        <span class="pr-field-val pr-tall" style="min-height:32pt;display:block">${esc(iv.duties)}</span>
+        <span class="pr-field-val pr-tall" style="min-height:18pt;display:block">${esc(iv.duties)}</span>
       </td>
     </tr>
     <!-- 7 Tools -->
     <tr>
       <td colspan="2">
         <span class="pr-field-label">7. ${s.l7}</span>
-        <span class="pr-field-val" style="min-height:22pt;display:block">${esc(iv.tools)}</span>
+        <span class="pr-field-val" style="min-height:14pt;display:block">${esc(iv.tools)}</span>
       </td>
     </tr>
     <!-- 8 / 8a / 10 -->
@@ -1189,18 +1235,19 @@ function buildAndPrint(iv) {
       <td colspan="2">
         <table style="width:100%;border-collapse:collapse">
           <tr>
-            <td style="border:none;border-right:1pt solid #000;padding:3pt 4pt;width:25%;vertical-align:top">
-              <span class="pr-field-label" style="font-size:6.5pt">Y &nbsp; N</span>
-              <div style="font-size:7.5pt;margin-bottom:3pt"><strong>8.</strong> ${s.l8}</div>
+            <td style="border:none;border-right:1pt solid #000;padding:2pt 3pt;width:25%;vertical-align:top">
+              <span class="pr-field-label" style="font-size:5.5pt">Y &nbsp; N</span>
+              <div style="font-size:6.5pt;margin-bottom:2pt"><strong>8.</strong> ${s.l8}</div>
               ${yn(iv.apprentice, s.yes, s.no)}
             </td>
-            <td style="border:none;border-right:1pt solid #000;padding:3pt 4pt;width:25%;vertical-align:top">
-              <span class="pr-field-label" style="font-size:6.5pt">Y &nbsp; N</span>
-              <div style="font-size:7.5pt;margin-bottom:3pt"><strong>8a.</strong> ${s.l8a}</div>
-              ${yn(iv.apprenticeCert, s.yes, s.no)}
+            <td style="border:none;border-right:1pt solid #000;padding:2pt 3pt;width:25%;vertical-align:top">
+              <span class="pr-field-label" style="font-size:5.5pt">Y &nbsp; N &nbsp; N/A</span>
+              <div style="font-size:6.5pt;margin-bottom:2pt"><strong>8a.</strong> ${s.l8a}</div>
+              ${iv.apprentice === 'no' ? yn('na', s.yes, s.no) : yn(iv.apprenticeCert, s.yes, s.no)}
+              ${iv.apprenticeCertPhoto ? `<br><img src="${iv.apprenticeCertPhoto}" style="max-height:18pt;margin-top:2pt;">` : ''}
             </td>
-            <td style="border:none;padding:3pt 4pt;width:50%;vertical-align:top">
-              <div style="font-size:7.5pt;margin-bottom:3pt"><strong>10.</strong> ${s.l10}</div>
+            <td style="border:none;padding:2pt 3pt;width:50%;vertical-align:top">
+              <div style="font-size:6.5pt;margin-bottom:2pt"><strong>10.</strong> ${s.l10}</div>
               ${yn(iv.overtime, s.yes, s.no)}
             </td>
           </tr>
@@ -1212,12 +1259,12 @@ function buildAndPrint(iv) {
       <td colspan="2">
         <table style="width:100%;border-collapse:collapse">
           <tr>
-            <td style="border:none;border-right:1pt solid #000;padding:3pt 4pt;width:50%;vertical-align:top">
-              <div style="font-size:7.5pt;margin-bottom:3pt"><strong>9.</strong> ${s.l9}</div>
+            <td style="border:none;border-right:1pt solid #000;padding:2pt 3pt;width:50%;vertical-align:top">
+              <div style="font-size:6.5pt;margin-bottom:2pt"><strong>9.</strong> ${s.l9}</div>
               ${yn(iv.paidAllHours, s.yes, s.no)}
             </td>
-            <td style="border:none;padding:3pt 4pt;width:50%;vertical-align:top">
-              <div style="font-size:7.5pt;margin-bottom:3pt"><strong>11.</strong> ${s.l11}</div>
+            <td style="border:none;padding:2pt 3pt;width:50%;vertical-align:top">
+              <div style="font-size:6.5pt;margin-bottom:2pt"><strong>11.</strong> ${s.l11}</div>
               ${yn(iv.threatened, s.yes, s.no)}
             </td>
           </tr>
@@ -1229,11 +1276,11 @@ function buildAndPrint(iv) {
       <td colspan="2">
         <table style="width:100%;border-collapse:collapse">
           <tr>
-            <td style="border:none;border-right:1pt solid #000;padding:3pt 4pt;width:65%;vertical-align:top">
+            <td style="border:none;border-right:1pt solid #000;padding:2pt 3pt;width:65%;vertical-align:top">
               <span class="pr-field-label">12a. ${s.l12a}</span>
               <div style="min-height:32pt">${sigImg(iv.empSignature)}</div>
             </td>
-            <td style="border:none;padding:3pt 4pt;vertical-align:top">
+            <td style="border:none;padding:2pt 3pt;vertical-align:top">
               <span class="pr-field-label">12b. ${s.l12b}</span>
               <span class="pr-field-val">${esc(iv.empSignDate)}</span>
             </td>
@@ -1245,14 +1292,14 @@ function buildAndPrint(iv) {
     <tr>
       <td colspan="2">
         <span class="pr-field-label">13. ${s.l13}</span>
-        <span class="pr-field-val pr-xtall" style="min-height:52pt;display:block">${esc(iv.observedDuties)}</span>
+        <span class="pr-field-val pr-xtall" style="min-height:30pt;display:block">${esc(iv.observedDuties)}</span>
       </td>
     </tr>
     <!-- 14 Remarks -->
     <tr>
       <td colspan="2">
         <span class="pr-field-label">14. ${s.l14}</span>
-        <span class="pr-field-val pr-tall" style="min-height:40pt;display:block">${esc(iv.remarks)}</span>
+        <span class="pr-field-val pr-tall" style="min-height:22pt;display:block">${esc(iv.remarks)}</span>
       </td>
     </tr>
     <!-- 15a 15b 15c -->
@@ -1260,15 +1307,15 @@ function buildAndPrint(iv) {
       <td colspan="2">
         <table style="width:100%;border-collapse:collapse">
           <tr>
-            <td style="border:none;border-right:1pt solid #000;padding:3pt 4pt;width:33%;vertical-align:top">
+            <td style="border:none;border-right:1pt solid #000;padding:2pt 3pt;width:33%;vertical-align:top">
               <span class="pr-field-label">15a. ${s.l15a}</span>
               <span class="pr-field-val">${esc(iv.interviewerName)}</span>
             </td>
-            <td style="border:none;border-right:1pt solid #000;padding:3pt 4pt;width:33%;vertical-align:top">
+            <td style="border:none;border-right:1pt solid #000;padding:2pt 3pt;width:33%;vertical-align:top">
               <span class="pr-field-label">15b. ${s.l15b}</span>
-              <div style="min-height:28pt">${sigImg(iv.interviewerSignature)}</div>
+              <div style="min-height:20pt">${sigImg(iv.interviewerSignature)}</div>
             </td>
-            <td style="border:none;padding:3pt 4pt;vertical-align:top">
+            <td style="border:none;padding:2pt 3pt;vertical-align:top">
               <span class="pr-field-label">15c. ${s.l15c}</span>
               <span class="pr-field-val">${esc(iv.interviewDate)}</span>
             </td>
@@ -1286,7 +1333,7 @@ function buildAndPrint(iv) {
     <tr>
       <td colspan="2">
         <span class="pr-field-label">16. ${s.l16}</span>
-        <span class="pr-field-val pr-xtall" style="min-height:52pt;display:block"></span>
+        <span class="pr-field-val pr-xtall" style="min-height:30pt;display:block"></span>
       </td>
     </tr>
     <!-- 17a / 17b -->
@@ -1294,11 +1341,11 @@ function buildAndPrint(iv) {
       <td colspan="2">
         <table style="width:100%;border-collapse:collapse">
           <tr>
-            <td style="border:none;border-right:1pt solid #000;padding:3pt 4pt;width:65%;vertical-align:top">
+            <td style="border:none;border-right:1pt solid #000;padding:2pt 3pt;width:65%;vertical-align:top">
               <span class="pr-field-label">17a. ${s.l17a}</span>
               <span style="display:block;border-bottom:1pt solid #000;min-height:28pt;"></span>
             </td>
-            <td style="border:none;padding:3pt 4pt;vertical-align:top">
+            <td style="border:none;padding:2pt 3pt;vertical-align:top">
               <span class="pr-field-label">17b. ${s.l17b}</span>
               <span class="pr-field-val"></span>
             </td>
@@ -1314,10 +1361,10 @@ function buildAndPrint(iv) {
 <div class="pr-addl-page">
   <table class="pr-table" style="margin-bottom:0">
     <tr>
-      <td style="width:55%;border:none;padding:0 0 4pt 0;vertical-align:top">
-        <div style="font-size:13pt;font-weight:bold;line-height:1.2">${s.formTitle}</div>
+      <td style="width:55%;border:none;padding:0 0 3pt 0;vertical-align:top">
+        <div style="font-size:11pt;font-weight:bold;line-height:1.2">${s.formTitle}</div>
       </td>
-      <td style="border:none;padding:0 0 4pt 0;vertical-align:top;text-align:right;font-size:7.5pt;line-height:1.5">
+      <td style="border:none;padding:0 0 3pt 0;vertical-align:top;text-align:right;font-size:6.5pt;line-height:1.4">
         ${s.agencyTitle.replace('\n','<br>')}
         <br><strong>${s.omb.replace('\n','<br>')}</strong>
       </td>
@@ -1344,7 +1391,7 @@ function buildAndPrint(iv) {
     const namePart = first ? last + ',' + first : last;
     const company = (iv.contractor || '').trim();
     const dateStr = (iv.interviewDate || '').replace(/-/g, '');
-    const label = (iv.lang || 'en') === 'es' ? 'Historial de Entrevista' : 'Employee Interview';
+    const label = (iv.lang || 'en') === 'es' ? 'Historial de Entrevista del Empleado' : 'Employee Interview';
     let filename = namePart;
     if (company) filename += '_' + company;
     filename += '-' + label;
