@@ -134,7 +134,7 @@ textarea { resize: vertical; min-height: 70px; line-height: 1.5; }
 @media print {
   * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
   html, body { background: #fff !important; color: #000 !important; font-size: 8pt; font-family: Arial, sans-serif; }
-  #dashboard, #formView, #toast, .sheet-overlay { display: none !important; }
+  #dashboard, #formView, #toast, .sheet-overlay, .sig-expanded-overlay, #sigExpandedOverlay { display: none !important; }
   #printArea { display: block !important; }
 
   @page { size: letter; margin: .38in .45in .35in; }
@@ -289,6 +289,17 @@ textarea { resize: vertical; min-height: 70px; line-height: 1.5; }
 <!-- Toast -->
 <div id="toast"></div>
 
+
+<div class="sig-expanded-overlay" id="sigExpandedOverlay" style="display:none">
+  <div class="sig-expanded-inner">
+    <div class="sig-expanded-title" id="sigExpandedTitle">Sign Here</div>
+    <canvas class="sig-expanded-canvas" id="sigExpandedCanvas" height="220"></canvas>
+    <div class="sig-expanded-btns">
+      <button class="sig-btn-clear" onclick="clearExpandedSig()">Clear</button>
+      <button class="sig-btn-done" onclick="doneExpandedSig()">Done ✓</button>
+    </div>
+  </div>
+</div>
 <!-- Print tip modal -->
 <div id="printModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:500;align-items:center;justify-content:center;">
   <div style="background:var(--navy2);border:2px solid var(--amber);border-radius:12px;padding:28px;max-width:420px;width:90%;text-align:center;">
@@ -329,7 +340,8 @@ const STRINGS = {
     l2bEmail: 'Email',
     l2c: 'Employee\'s Home Address & Zip Code',
     l2d: 'Verification of Identification?',
-    l3a: 'How long on this job & avg. weekly hours worked?',
+    l3a: 'How long on this job?',
+    l3aHrs: 'Avg. weekly hours',
     l3b: 'Last date on this job before today?',
     l3c: 'Number of hours last day on this job?',
     l4a: 'Hourly Rate of Pay',
@@ -357,6 +369,8 @@ const STRINGS = {
     l17b: 'Date',
     l18: 'Additional Remarks',
     yes: 'Yes', no: 'No', na: 'N/A',
+    l8aPhoto: 'Apprenticeship Certificate Photo (optional)',
+    l8aPhotoHint: 'Tap to attach a photo of the certificate', na: 'N/A',
     l8aPhoto: 'Apprenticeship Certificate Photo (optional)',
     l8aPhotoHint: 'Tap to attach a photo of the certificate',
     weekly: 'Weekly', biweekly: 'Biweekly', semimonthly: 'Semi-monthly', other: 'Other',
@@ -408,7 +422,8 @@ const STRINGS = {
     l2bEmail: 'Correo Electrónico',
     l2c: 'Dirección Residencial y Código Postal del Empleado',
     l2d: '¿Verificación de Identificación?',
-    l3a: '¿Cuánto tiempo lleva en este trabajo y promedio de horas semanales?',
+    l3a: '¿Cuánto tiempo lleva en este trabajo?',
+    l3aHrs: 'Promedio de horas semanales',
     l3b: '¿Última fecha en este trabajo antes de hoy?',
     l3c: '¿Cuántas horas en su último día en este trabajo?',
     l4a: 'Salario por Hora',
@@ -436,6 +451,8 @@ const STRINGS = {
     l17b: 'Fecha',
     l18: 'Comentarios Adicionales',
     yes: 'Sí', no: 'No', na: 'N/A',
+    l8aPhoto: 'Foto del Certificado de Aprendizaje (opcional)',
+    l8aPhotoHint: 'Toque para adjuntar una foto del certificado', na: 'N/A',
     l8aPhoto: 'Foto del Certificado de Aprendizaje (opcional)',
     l8aPhotoHint: 'Toque para adjuntar una foto del certificado',
     weekly: 'Semanal', biweekly: 'Quincenal', semimonthly: 'Semimensual', other: 'Otro',
@@ -481,7 +498,7 @@ function blankInterview() {
     lang: 'en',
     projectName: '', projectNumber: '', contractor: '',
     empName: '', empPhone: '', empEmail: '', empAddress: '', empIdVerified: '',
-    timeOnJob: '', lastDate: '', hoursLastDay: '',
+    timeOnJob: '', avgWeeklyHours: '', lastDate: '', hoursLastDay: '',
     hourlyRate: '', fringeMedical: '', fringePension: '', payFrequency: '',
     classifications: '', duties: '', tools: '',
     apprentice: '', apprenticeCert: '', apprenticeCertPhoto: '', paidAllHours: '', overtime: '', threatened: '',
@@ -674,6 +691,15 @@ function clearAll() {
   showToast('All interviews deleted.');
 }
 
+function clearAll() {
+  const all = getAll();
+  if (!all.length) { showToast('No interviews to clear.'); return; }
+  if (!confirm('Delete ALL ' + all.length + ' saved interview(s)? This cannot be undone.')) return;
+  saveAll([]);
+  renderDashboard();
+  showToast('All interviews deleted.');
+}
+
 // ── LANGUAGE ──────────────────────────────────────────────────────
 function setLang(lang) {
   currentLang = lang;
@@ -731,11 +757,12 @@ function renderForm() {
     <div class="fgrid cols2" style="margin-top:10px">
       <div class="frow">
         <label><span class="lnum">2b.</span>${t('l2bPhone')}</label>
-        <input type="tel" value="${esc(ci.empPhone)}" oninput="currentInterview.empPhone=this.value">
+        <input type="text" inputmode="numeric" value="${esc(ci.empPhone)}" placeholder="(916) 555-1234" oninput="currentInterview.empPhone=fmtPhone(this.value);this.value=currentInterview.empPhone">
       </div>
       <div class="frow">
         <label><span class="lnum">2b.</span>${t('l2bEmail')}</label>
-        <input type="email" value="${esc(ci.empEmail)}" oninput="currentInterview.empEmail=this.value">
+        <input type="email" value="${esc(ci.empEmail)}" list="emailDomains" placeholder="name@gmail.com" oninput="currentInterview.empEmail=this.value;updateEmailList(this.value)">
+        <datalist id="emailDomains"></datalist>
       </div>
     </div>
     <div class="fgrid cols2" style="margin-top:10px">
@@ -761,7 +788,12 @@ function renderForm() {
     <div class="fgrid cols3">
       <div class="frow">
         <label><span class="lnum">3a.</span>${t('l3a')}</label>
-        <input type="text" value="${esc(ci.timeOnJob)}" oninput="currentInterview.timeOnJob=this.value">
+        <input type="text" value="${esc(ci.timeOnJob)}" placeholder="e.g. 2 weeks" oninput="currentInterview.timeOnJob=this.value">
+        <label style="margin-top:8px">${t('l3aHrs')}</label>
+        <div style="display:flex;align-items:center;gap:8px">
+          <input type="number" min="0" max="168" step="0.5" value="${ci.avgWeeklyHours||''}" placeholder="40" style="max-width:90px" oninput="currentInterview.avgWeeklyHours=this.value">
+          <span style="color:var(--gray);font-size:.85rem">hrs</span>
+        </div>
       </div>
       <div class="frow">
         <label><span class="lnum">3b.</span>${t('l3b')}</label>
@@ -769,7 +801,10 @@ function renderForm() {
       </div>
       <div class="frow">
         <label><span class="lnum">3c.</span>${t('l3c')}</label>
-        <input type="text" value="${esc(ci.hoursLastDay)}" oninput="currentInterview.hoursLastDay=this.value">
+        <div style="display:flex;align-items:center;gap:8px">
+          <input type="number" min="0" max="24" step="0.5" value="${ci.hoursLastDay||''}" placeholder="8" style="max-width:90px" oninput="currentInterview.hoursLastDay=this.value">
+          <span style="color:var(--gray);font-size:.85rem">hrs</span>
+        </div>
       </div>
     </div>
     <div class="fgrid" style="margin-top:10px">
@@ -969,6 +1004,10 @@ function ynRadioRender(field, label, val, current) {
   const chk = current === val ? 'checked' : '';
   return `<label class="yn-opt"><input type="radio" name="${field}" value="${val}" ${chk} onchange="currentInterview['${field}']=this.value;renderForm()"> ${label}</label>`;
 }
+function ynRadioRender(field, label, val, current) {
+  const chk = current === val ? 'checked' : '';
+  return `<label class="yn-opt"><input type="radio" name="${field}" value="${val}" ${chk} onchange="currentInterview['${field}']=this.value;if('${field}'==='apprentice'&&this.value==='no'){currentInterview.apprenticeCert='na';}else if('${field}'==='apprentice'&&this.value==='yes'){if(currentInterview.apprenticeCert==='na')currentInterview.apprenticeCert='';}renderForm()"> ${label}</label>`;
+}
 function ynRadio(field, label, val, current) {
   const chk = current === val ? 'checked' : '';
   return `<label class="yn-opt"><input type="radio" name="${field}" value="${val}" ${chk} onchange="currentInterview['${field}']=this.value"> ${label}</label>`;
@@ -999,14 +1038,35 @@ function attachCertPhoto(evt) {
   reader.readAsDataURL(file);
 }
 
+function attachCertPhoto(evt) {
+  const file = evt.target.files[0]; if (!file) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    const img = new Image();
+    img.onload = () => {
+      const max = 800; let w = img.width, h = img.height;
+      if (w > max || h > max) { if (w > h) { h = Math.round(h*max/w); w = max; } else { w = Math.round(w*max/h); h = max; } }
+      const canvas = document.createElement('canvas');
+      canvas.width = w; canvas.height = h;
+      canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+      currentInterview.apprenticeCertPhoto = canvas.toDataURL('image/jpeg', 0.75);
+      renderForm();
+    };
+    img.src = e.target.result;
+  };
+  reader.readAsDataURL(file);
+}
+
 // ── SIGNATURE PAD ─────────────────────────────────────────────────
 function renderSigPad(key, existing) {
+  const lbl = key === 'empSignature' ? (currentLang==='es'?'Firma del Empleado':'Employee Signature') : (currentLang==='es'?'Firma del Entrevistador':'Interviewer Signature');
   return `
     <div class="sig-wrap" style="height:70px">
       <canvas class="sig-canvas" data-sigkey="${key}" height="70"></canvas>
     </div>
     <div class="sig-controls">
       <button class="sig-btn" onclick="clearSig('${key}')">${t('clearSig')}</button>
+      <button class="sig-btn" onclick="expandSig('${key}','${lbl}')" style="border-color:var(--amber);color:var(--amber)">✏️ Sign</button>
     </div>`;
 }
 
@@ -1085,12 +1145,15 @@ window.confirmPrint = function() {
   buildAndPrint(window._pendingPrintIv);
 };
 
-function yn(val, yesLabel, noLabel) {
+function yn(val, yesLabel, noLabel, naLabel) {
   const y = val === 'yes' || val === 'Sí' || val === 'Yes';
   const n = val === 'no' || val === 'No';
-  return `
+  const na = val === 'na' || val === 'N/A';
+  let out = `
     <span style="margin-right:8pt"><span style="display:inline-block;width:9pt;height:9pt;border:1pt solid #000;background:${y?'#000':'#fff'};vertical-align:middle;margin-right:2pt;"></span> ${yesLabel}</span>
-    <span><span style="display:inline-block;width:9pt;height:9pt;border:1pt solid #000;background:${n?'#000':'#fff'};vertical-align:middle;margin-right:2pt;"></span> ${noLabel}</span>`;
+    <span style="margin-right:8pt"><span style="display:inline-block;width:9pt;height:9pt;border:1pt solid #000;background:${n?'#000':'#fff'};vertical-align:middle;margin-right:2pt;"></span> ${noLabel}</span>`;
+  if (naLabel) out += `<span><span style="display:inline-block;width:9pt;height:9pt;border:1pt solid #000;background:${na?'#000':'#fff'};vertical-align:middle;margin-right:2pt;"></span> ${naLabel}</span>`;
+  return out;
 }
 function freq(iv) {
   const f = iv.payFrequency;
@@ -1171,7 +1234,7 @@ function buildAndPrint(iv) {
           <tr>
             <td style="border:none;border-right:1pt solid #000;padding:2pt 3pt;width:25%;vertical-align:top">
               <span class="pr-field-label">3a. ${s.l3a}</span>
-              <span class="pr-field-val" style="min-height:16pt;display:block">${esc(iv.timeOnJob)}</span>
+              <span class="pr-field-val" style="min-height:16pt;display:block">${esc(iv.timeOnJob)}${iv.avgWeeklyHours ? " / " + iv.avgWeeklyHours + " hrs/wk" : ""}</span>
             </td>
             <td style="border:none;border-right:1pt solid #000;padding:2pt 3pt;width:25%;vertical-align:top">
               <span class="pr-field-label">3b. ${s.l3b}</span>
@@ -1241,9 +1304,9 @@ function buildAndPrint(iv) {
               ${yn(iv.apprentice, s.yes, s.no)}
             </td>
             <td style="border:none;border-right:1pt solid #000;padding:2pt 3pt;width:25%;vertical-align:top">
-              <span class="pr-field-label" style="font-size:5.5pt">Y &nbsp; N &nbsp; N/A</span>
+              <span class="pr-field-label" style="font-size:5.5pt">Y &nbsp;&nbsp; N &nbsp;&nbsp; N/A</span>
               <div style="font-size:6.5pt;margin-bottom:2pt"><strong>8a.</strong> ${s.l8a}</div>
-              ${iv.apprentice === 'no' ? yn('na', s.yes, s.no) : yn(iv.apprenticeCert, s.yes, s.no)}
+              ${iv.apprentice === 'no' ? yn('na', s.yes, s.no, 'N/A') : yn(iv.apprenticeCert, s.yes, s.no)}
               ${iv.apprenticeCertPhoto ? `<br><img src="${iv.apprenticeCertPhoto}" style="max-height:18pt;margin-top:2pt;">` : ''}
             </td>
             <td style="border:none;padding:2pt 3pt;width:50%;vertical-align:top">
@@ -1429,6 +1492,84 @@ function showToast(msg) {
 
 // ── INIT ──────────────────────────────────────────────────────────
 renderDashboard();
+
+// ── PHONE FORMAT ─────────────────────────────────────────────────
+function fmtPhone(val) {
+  const d = val.replace(/\D/g,'').slice(0,10);
+  if (d.length < 4) return d;
+  if (d.length < 7) return '(' + d.slice(0,3) + ') ' + d.slice(3);
+  return '(' + d.slice(0,3) + ') ' + d.slice(3,6) + '-' + d.slice(6);
+}
+
+// ── EMAIL AUTOCOMPLETE ────────────────────────────────────────────
+const EMAIL_DOMAINS = ['@gmail.com','@hotmail.com','@yahoo.com','@outlook.com','@icloud.com','.com'];
+function updateEmailList(val) {
+  const dl = document.getElementById('emailDomains');
+  if (!dl) return;
+  const at = val.indexOf('@');
+  if (at < 0) { dl.innerHTML = ''; return; }
+  const user = val.slice(0, at);
+  dl.innerHTML = EMAIL_DOMAINS.map(d => `<option value="${user}${d}">`).join('');
+}
+
+// ── EXPANDED SIGNATURE PAD ────────────────────────────────────────
+let _expandKey = null;
+let _expandCtx = null;
+let _expandDrawing = false;
+let _expandLx = 0, _expandLy = 0;
+
+function expandSig(key, label) {
+  _expandKey = key;
+  const overlay = document.getElementById('sigExpandedOverlay');
+  const canvas = document.getElementById('sigExpandedCanvas');
+  document.getElementById('sigExpandedTitle').textContent = label;
+  overlay.style.display = 'flex';
+  canvas.width = canvas.offsetWidth || 560;
+  canvas.height = 220;
+  _expandCtx = canvas.getContext('2d');
+  _expandCtx.strokeStyle = '#000';
+  _expandCtx.lineWidth = 2.5;
+  _expandCtx.lineCap = 'round';
+  _expandCtx.lineJoin = 'round';
+  const existing = currentInterview[key];
+  if (existing) {
+    const img = new Image();
+    img.onload = () => _expandCtx.drawImage(img, 0, 0, canvas.width, canvas.height);
+    img.src = existing;
+  }
+  canvas.ontouchstart = _exStart;
+  canvas.ontouchmove = _exMove;
+  canvas.ontouchend = _exEnd;
+  canvas.onmousedown = _exStart;
+  canvas.onmousemove = _exMove;
+  canvas.onmouseup = _exEnd;
+}
+function _exPos(e) {
+  const canvas = document.getElementById('sigExpandedCanvas');
+  const r = canvas.getBoundingClientRect();
+  const src = e.touches ? e.touches[0] : e;
+  return { x:(src.clientX-r.left)*(canvas.width/r.width), y:(src.clientY-r.top)*(canvas.height/r.height) };
+}
+function _exStart(e) { e.preventDefault(); _expandDrawing=true; const p=_exPos(e); _expandLx=p.x; _expandLy=p.y; }
+function _exMove(e) {
+  if (!_expandDrawing) return; e.preventDefault();
+  const p=_exPos(e);
+  _expandCtx.beginPath(); _expandCtx.moveTo(_expandLx,_expandLy); _expandCtx.lineTo(p.x,p.y); _expandCtx.stroke();
+  _expandLx=p.x; _expandLy=p.y;
+}
+function _exEnd(e) { _expandDrawing=false; }
+function clearExpandedSig() {
+  const canvas = document.getElementById('sigExpandedCanvas');
+  _expandCtx.clearRect(0,0,canvas.width,canvas.height);
+}
+function doneExpandedSig() {
+  const canvas = document.getElementById('sigExpandedCanvas');
+  currentInterview[_expandKey] = canvas.toDataURL('image/png');
+  document.getElementById('sigExpandedOverlay').style.display = 'none';
+  restoreSig(_expandKey, currentInterview[_expandKey]);
+  _expandKey = null;
+}
+
 </script>
 </body>
 </html>
