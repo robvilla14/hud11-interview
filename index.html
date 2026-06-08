@@ -22,6 +22,104 @@
   --mono:   'Courier New', monospace;
 }
 html, body { height: 100%; background: var(--navy); color: var(--white); font-family: var(--font); font-size: 15px; }
+/* ── LIGHT MODE ───────────────────────────────────────────────── */
+body.light-mode {
+  --navy:   #E8ECF4;
+  --navy2:  #FFFFFF;
+  --navy3:  #C4D0DE;
+  --amber:  #B87000;
+  --amber2: #D08800;
+  --gray:   #607890;
+  --light:  #4A5D6D;
+  --white:  #1A2C46;
+  background: #E8ECF4;
+  color: #1A2C46;
+}
+
+/* Inputs and form controls in light mode */
+body.light-mode input,
+body.light-mode select,
+body.light-mode textarea {
+  background: #FFFFFF !important;
+  color: #1A2C46 !important;
+  border-color: #C4D0DE !important;
+}
+
+/* qblock (hardcoded bg) */
+body.light-mode .qblock {
+  background: #F0F4F8 !important;
+  border-color: #C4D0DE !important;
+}
+
+/* Hover states */
+body.light-mode .interview-card:hover { background: #EEF2F8; }
+body.light-mode .sheet-item:hover     { background: #EEF2F8; }
+
+/* Bottom sheet */
+body.light-mode .sheet { background: #FFFFFF; }
+
+/* Payroll notice */
+body.light-mode .payroll-notice {
+  background: #EEF2F8 !important;
+  border-color: #C4D0DE !important;
+}
+
+/* Section form body hardcoded bg */
+body.light-mode .fsec { background: #FFFFFF; }
+body.light-mode .fsec-head { background: #E0E8F0; }
+
+/* Card actions */
+body.light-mode .card-btn.open   { border-color: #B87000; color: #B87000; }
+body.light-mode .card-btn.open:hover { background: #B87000; color: #fff; }
+
+/* Lang toggle */
+body.light-mode .lang-btn        { background: #E0E8F0; color: #4A5D6D; }
+body.light-mode .lang-btn.active { background: #B87000; color: #FFFFFF; }
+
+/* Storage fill */
+body.light-mode .storage-bar     { background: #C4D0DE; }
+
+/* Dark mode toggle button */
+.mode-btn {
+  background: none;
+  border: 1px solid var(--amber);
+  color: var(--amber);
+  border-radius: 6px;
+  padding: 5px 11px;
+  font-size: .8rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+  font-family: var(--font);
+}
+.mode-btn:hover {
+  background: var(--amber);
+  color: var(--navy);
+}
+
+/* Keyboard language tip */
+.lang-tip {
+  font-size: 0.72rem;
+  color: var(--gray);
+  margin-top: 4px;
+  font-style: italic;
+}
+
+/* ── HOURS INPUT — larger on screen, compact on print ── */
+.hours-input {
+  max-width: 130px;
+  font-size: 1.1rem;
+  padding: 8px 10px;
+  min-height: 42px;
+}
+
+@media print {
+  .mode-btn { display: none !important; }
+  .lang-tip    { display: none !important; }
+  .hours-input { max-width: 90px !important; font-size: inherit !important; padding: inherit !important; min-height: auto !important; }
+}
+
 
 /* ── DASHBOARD ────────────────────────────────────────────────── */
 #dashboard { display: flex; flex-direction: column; min-height: 100vh; padding: 0 0 40px; }
@@ -71,7 +169,8 @@ html, body { height: 100%; background: var(--navy); color: var(--white); font-fa
 
 /* ── FORM VIEW ────────────────────────────────────────────────── */
 #formView { display: none; min-height: 100vh; flex-direction: column; }
-.form-header { background: var(--navy2); border-bottom: 2px solid var(--amber); padding: 14px 18px; display: flex; align-items: center; gap: 12px; position: sticky; top: 0; z-index: 100; }
+.form-header { background: var(--navy2); border-bottom: 2px solid var(--amber); padding: 0 18px; position: sticky; top: 0; z-index: 100; }
+.form-header-inner { max-width: 860px; margin: 0 auto; width: 100%; display: flex; align-items: center; gap: 12px; padding: 14px 0; }
 .form-header .back-btn { background: none; border: 1px solid var(--amber); color: var(--amber); border-radius: 6px; padding: 7px 12px; font-size: .85rem; cursor: pointer; font-weight: 700; }
 .form-header .form-title { font-weight: 700; font-size: 1rem; color: var(--amber); flex: 1; }
 .lang-toggle { display: flex; border: 1px solid var(--navy3); border-radius: 6px; overflow: hidden; }
@@ -190,7 +289,10 @@ textarea { resize: vertical; min-height: 70px; line-height: 1.5; }
       <div class="dash-header h1" style="font-size:1.15rem;font-weight:700;letter-spacing:.04em;color:var(--amber);">HUD-11 Employee Interview</div>
       <div class="sub">Record of Employee Interview · Davis-Bacon &amp; Labor Standards</div>
     </div>
-    <div class="logo">Labor Compliance<br>Solutions</div>
+    <div style="display:flex;flex-direction:column;align-items:flex-end;gap:8px;">
+      <div class="logo">Labor Compliance<br>Solutions</div>
+      <button class="mode-btn" onclick="toggleMode()">Light</button>
+    </div>
   </div>
 
   <div class="dash-body">
@@ -206,17 +308,17 @@ textarea { resize: vertical; min-height: 70px; line-height: 1.5; }
     <!-- Action buttons -->
     <div class="dash-actions" style="grid-template-columns:1fr 1fr 1fr">
       <button class="btn-primary" onclick="newInterview()">+ New Interview</button>
-      <button class="btn-secondary" onclick="openCopySheet()">⎘ Copy Forward</button>
-      <button class="btn-secondary" onclick="openInstructions()">📋 Instructions</button>
+      <button class="btn-secondary" onclick="openCopySheet()">Copy Forward</button>
+      <button class="btn-secondary" onclick="openInstructions()">Instructions</button>
     </div>
 
     <!-- Export/Import/Clear -->
     <div style="display:flex;gap:10px;margin-bottom:24px;">
-      <button class="btn-secondary" style="flex:1;padding:9px;" onclick="exportAll()">↓ Export Backup</button>
+      <button class="btn-secondary" style="flex:1;padding:9px;" onclick="exportAll()">Export Backup</button>
       <label class="btn-secondary" style="flex:1;padding:9px;text-align:center;cursor:pointer;">
-        ↑ Import Backup<input type="file" accept=".json" style="display:none" onchange="importAll(event)">
+        Import Backup<input type="file" accept=".json" style="display:none" onchange="importAll(event)">
       </label>
-      <button class="btn-secondary" style="flex:1;padding:9px;border-color:var(--red);color:var(--red);" onclick="clearAll()">🗑 Clear All</button>
+      <button class="btn-secondary" style="flex:1;padding:9px;border-color:var(--red);color:var(--red);" onclick="clearAll()">Clear All</button>
     </div>
 
     <!-- Interview list -->
@@ -240,13 +342,19 @@ textarea { resize: vertical; min-height: 70px; line-height: 1.5; }
 <!-- ═══════════════════════════════════════════════════════════ -->
 <div id="formView">
   <div class="form-header">
-    <button class="back-btn" onclick="goBack()">← Back</button>
-    <div class="form-title" id="formTitle">New Interview</div>
-    <div class="lang-toggle">
-      <button class="lang-btn active" id="btnEN" onclick="setLang('en')">EN</button>
-      <button class="lang-btn" id="btnES" onclick="setLang('es')">ES</button>
+    <div class="form-header-inner">
+      <button class="back-btn" onclick="goBack()">Back</button>
+      <div class="form-title" id="formTitle">New Interview</div>
+      <div>
+        <div class="lang-toggle">
+          <button class="lang-btn active" id="btnEN" onclick="setLang('en')">EN</button>
+          <button class="lang-btn" id="btnES" onclick="setLang('es')">ES</button>
+        </div>
+        <div class="lang-tip" id="langTip"></div>
+      </div>
+      <button class="mode-btn" onclick="toggleMode()">Light</button>
+      <button class="save-btn" onclick="saveInterview()">Save</button>
     </div>
-    <button class="save-btn" onclick="saveInterview()">Save</button>
   </div>
   <div class="form-body" id="formBody"></div>
 </div>
@@ -256,12 +364,12 @@ textarea { resize: vertical; min-height: 70px; line-height: 1.5; }
 <!-- ═══════════════════════════════════════════════════════════ -->
 <div id="instructionsView" style="display:none;flex-direction:column;min-height:100vh;">
   <div class="form-header">
-    <button class="back-btn" onclick="closeInstructions()">← Back</button>
+    <button class="back-btn" onclick="closeInstructions()">Back</button>
     <div class="form-title" id="instrTitle">Instructions — Form HUD-11</div>
     <div class="lang-toggle">
       <button class="lang-btn active" id="instrBtnEN" onclick="setInstrLang('en')">EN</button>
       <button class="lang-btn" id="instrBtnES" onclick="setInstrLang('es')">ES</button>
-    </div>
+    <button class="mode-btn" onclick="toggleMode()">Light</button>
   </div>
   <div style="padding:24px;max-width:860px;margin:0 auto;width:100%;">
     <div style="background:var(--navy2);border-radius:10px;overflow:hidden;margin-bottom:16px;">
@@ -276,7 +384,7 @@ textarea { resize: vertical; min-height: 70px; line-height: 1.5; }
       <span id="instrFootnote"></span>
     </div>
     <div style="text-align:center;padding-bottom:32px;">
-      <button class="btn-secondary" onclick="closeInstructions()" style="min-width:160px;">← Back to Dashboard</button>
+      <button class="btn-secondary" onclick="closeInstructions()" style="min-width:160px;">Back to Dashboard</button>
     </div>
   </div>
 </div>
@@ -296,7 +404,7 @@ textarea { resize: vertical; min-height: 70px; line-height: 1.5; }
     <canvas class="sig-expanded-canvas" id="sigExpandedCanvas" height="220"></canvas>
     <div class="sig-expanded-btns">
       <button class="sig-btn-clear" onclick="clearExpandedSig()">Clear</button>
-      <button class="sig-btn-done" onclick="doneExpandedSig()">Done ✓</button>
+      <button class="sig-btn-done" onclick="doneExpandedSig()">Done</button>
     </div>
   </div>
 </div>
@@ -646,7 +754,7 @@ function autoSave() {
 }
 function saveInterview() {
   autoSave();
-  showToast('Saved ✓');
+  showToast('Saved');
   setTimeout(() => {
     document.getElementById('formView').style.display = 'none';
     document.getElementById('dashboard').style.display = 'flex';
@@ -675,7 +783,7 @@ function importAll(evt) {
     try {
       const arr = JSON.parse(e.target.result);
       if (!Array.isArray(arr)) throw new Error();
-      saveAll(arr); renderDashboard(); showToast('Imported ' + arr.length + ' interviews ✓');
+      saveAll(arr); renderDashboard(); showToast('Imported ' + arr.length + ' interviews');
     } catch { showToast('Invalid backup file.'); }
   };
   r.readAsText(file);
@@ -710,6 +818,7 @@ function setLang(lang) {
 function updateLangBtns() {
   document.getElementById('btnEN').classList.toggle('active', currentLang === 'en');
   document.getElementById('btnES').classList.toggle('active', currentLang === 'es');
+  updateLangTip(currentLang);
 }
 function t(key) { return (STRINGS[currentLang] || STRINGS.en)[key] || key; }
 
@@ -791,7 +900,7 @@ function renderForm() {
         <input type="text" value="${esc(ci.timeOnJob)}" placeholder="e.g. 2 weeks" oninput="currentInterview.timeOnJob=this.value">
         <label style="margin-top:8px">${t('l3aHrs')}</label>
         <div style="display:flex;align-items:center;gap:8px">
-          <input type="number" min="0" max="168" step="0.5" value="${ci.avgWeeklyHours||''}" placeholder="40" style="max-width:90px" oninput="currentInterview.avgWeeklyHours=this.value">
+          <input type="number" min="0" max="168" step="0.5" value="${ci.avgWeeklyHours||''}" placeholder="40" class="hours-input" oninput="currentInterview.avgWeeklyHours=this.value">
           <span style="color:var(--gray);font-size:.85rem">hrs</span>
         </div>
       </div>
@@ -802,7 +911,7 @@ function renderForm() {
       <div class="frow">
         <label><span class="lnum">3c.</span>${t('l3c')}</label>
         <div style="display:flex;align-items:center;gap:8px">
-          <input type="number" min="0" max="24" step="0.5" value="${ci.hoursLastDay||''}" placeholder="8" style="max-width:90px" oninput="currentInterview.hoursLastDay=this.value">
+          <input type="number" min="0" max="24" step="0.5" value="${ci.hoursLastDay||''}" placeholder="8" class="hours-input" oninput="currentInterview.hoursLastDay=this.value">
           <span style="color:var(--gray);font-size:.85rem">hrs</span>
         </div>
       </div>
@@ -887,9 +996,9 @@ function renderForm() {
           <div class="yn-label" style="font-size:.72rem;margin-bottom:6px">${t('l8aPhoto')}</div>
           ${ci.apprenticeCertPhoto ? `<div style="position:relative;display:inline-block">
             <img src="${ci.apprenticeCertPhoto}" style="max-height:80px;border-radius:4px;border:1px solid var(--navy3)">
-            <button onclick="currentInterview.apprenticeCertPhoto='';renderForm()" style="position:absolute;top:-6px;right:-6px;background:var(--red);color:#fff;border:none;border-radius:50%;width:18px;height:18px;font-size:.65rem;cursor:pointer;line-height:1">✕</button>
+            <button onclick="currentInterview.apprenticeCertPhoto='';renderForm()" style="position:absolute;top:-6px;right:-6px;background:var(--red);color:#fff;border:none;border-radius:50%;width:18px;height:18px;font-size:.65rem;cursor:pointer;line-height:1">X</button>
           </div>` : `<label style="display:inline-flex;align-items:center;gap:8px;background:var(--navy3);border:1px dashed var(--amber);border-radius:6px;padding:8px 12px;cursor:pointer;font-size:.8rem;color:var(--amber)">
-            📎 ${t('l8aPhotoHint')}<input type="file" accept="image/*" capture="environment" style="display:none" onchange="attachCertPhoto(event)">
+            ${t('l8aPhotoHint')}<input type="file" accept="image/*" capture="environment" style="display:none" onchange="attachCertPhoto(event)">
           </label>`}
         </div>` : ''}
       </div>
@@ -1066,7 +1175,7 @@ function renderSigPad(key, existing) {
     </div>
     <div class="sig-controls">
       <button class="sig-btn" onclick="clearSig('${key}')">${t('clearSig')}</button>
-      <button class="sig-btn" onclick="expandSig('${key}','${lbl}')" style="border-color:var(--amber);color:var(--amber)">✏️ Sign</button>
+      <button class="sig-btn" onclick="expandSig('${key}','${lbl}')" style="border-color:var(--amber);color:var(--amber)">Sign</button>
     </div>`;
 }
 
@@ -1568,6 +1677,32 @@ function doneExpandedSig() {
   document.getElementById('sigExpandedOverlay').style.display = 'none';
   restoreSig(_expandKey, currentInterview[_expandKey]);
   _expandKey = null;
+}
+
+
+// ── LIGHT/DARK MODE TOGGLE ────────────────────────────────────────────────────
+function toggleMode() {
+  const lightMode = document.body.classList.toggle('light-mode');
+  document.querySelectorAll('.mode-btn').forEach(btn => {
+    btn.textContent = lightMode ? 'Dark' : 'Light';
+    btn.title = lightMode ? 'Switch to dark mode' : 'Switch to light mode';
+  });
+  if (lightMode) {
+    localStorage.setItem('hud11LightMode', 'enabled');
+  } else {
+    localStorage.removeItem('hud11LightMode');
+  }
+}
+
+// Update keyboard language tip
+function updateLangTip(lang) {
+  const tip = document.getElementById('langTip');
+  if (!tip) return;
+  if (lang === 'es') {
+    tip.textContent = 'Tip: Switch your device keyboard language to Spanish before typing.';
+  } else {
+    tip.textContent = '';
+  }
 }
 
 </script>
