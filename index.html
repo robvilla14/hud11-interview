@@ -291,7 +291,7 @@ textarea { resize: vertical; min-height: 70px; line-height: 1.5; }
     </div>
     <div style="display:flex;flex-direction:column;align-items:flex-end;gap:8px;">
       <div class="logo">Labor Compliance<br>Solutions</div>
-      <button class="mode-btn" onclick="toggleMode()">☀️ Light</button>
+      <button class="mode-btn" onclick="toggleMode()">Light</button>
     </div>
   </div>
 
@@ -308,17 +308,17 @@ textarea { resize: vertical; min-height: 70px; line-height: 1.5; }
     <!-- Action buttons -->
     <div class="dash-actions" style="grid-template-columns:1fr 1fr 1fr">
       <button class="btn-primary" onclick="newInterview()">+ New Interview</button>
-      <button class="btn-secondary" onclick="openCopySheet()">⎘ Copy Forward</button>
-      <button class="btn-secondary" onclick="openInstructions()">📋 Instructions</button>
+      <button class="btn-secondary" onclick="openCopySheet()">Copy Forward</button>
+      <button class="btn-secondary" onclick="openInstructions()">Instructions</button>
     </div>
 
     <!-- Export/Import/Clear -->
     <div style="display:flex;gap:10px;margin-bottom:24px;">
-      <button class="btn-secondary" style="flex:1;padding:9px;" onclick="exportAll()">↓ Export Backup</button>
+      <button class="btn-secondary" style="flex:1;padding:9px;" onclick="exportAll()">Export Backup</button>
       <label class="btn-secondary" style="flex:1;padding:9px;text-align:center;cursor:pointer;">
-        ↑ Import Backup<input type="file" accept=".json" style="display:none" onchange="importAll(event)">
+        Import Backup<input type="file" accept=".json" multiple style="display:none" onchange="importAll(event)">
       </label>
-      <button class="btn-secondary" style="flex:1;padding:9px;border-color:var(--red);color:var(--red);" onclick="clearAll()">🗑 Clear All</button>
+      <button class="btn-secondary" style="flex:1;padding:9px;border-color:var(--red);color:var(--red);" onclick="clearAll()">Clear All</button>
     </div>
 
     <!-- Interview list -->
@@ -343,7 +343,7 @@ textarea { resize: vertical; min-height: 70px; line-height: 1.5; }
 <div id="formView">
   <div class="form-header">
     <div class="form-header-inner">
-      <button class="back-btn" onclick="goBack()">← Back</button>
+      <button class="back-btn" onclick="goBack()">Back</button>
       <div class="form-title" id="formTitle">New Interview</div>
       <div>
         <div class="lang-toggle">
@@ -352,7 +352,7 @@ textarea { resize: vertical; min-height: 70px; line-height: 1.5; }
         </div>
         <div class="lang-tip" id="langTip"></div>
       </div>
-      <button class="mode-btn" onclick="toggleMode()">☀️</button>
+      <button class="mode-btn" onclick="toggleMode()">Light</button>
       <button class="save-btn" onclick="saveInterview()">Save</button>
     </div>
   </div>
@@ -364,12 +364,13 @@ textarea { resize: vertical; min-height: 70px; line-height: 1.5; }
 <!-- ═══════════════════════════════════════════════════════════ -->
 <div id="instructionsView" style="display:none;flex-direction:column;min-height:100vh;">
   <div class="form-header">
-    <button class="back-btn" onclick="closeInstructions()">← Back</button>
+    <button class="back-btn" onclick="closeInstructions()">Back</button>
     <div class="form-title" id="instrTitle">Instructions — Form HUD-11</div>
     <div class="lang-toggle">
       <button class="lang-btn active" id="instrBtnEN" onclick="setInstrLang('en')">EN</button>
       <button class="lang-btn" id="instrBtnES" onclick="setInstrLang('es')">ES</button>
-    <button class="mode-btn" onclick="toggleMode()">☀️</button>
+    </div>
+    <button class="mode-btn" onclick="toggleMode()">Light</button>
   </div>
   <div style="padding:24px;max-width:860px;margin:0 auto;width:100%;">
     <div style="background:var(--navy2);border-radius:10px;overflow:hidden;margin-bottom:16px;">
@@ -384,7 +385,7 @@ textarea { resize: vertical; min-height: 70px; line-height: 1.5; }
       <span id="instrFootnote"></span>
     </div>
     <div style="text-align:center;padding-bottom:32px;">
-      <button class="btn-secondary" onclick="closeInstructions()" style="min-width:160px;">← Back to Dashboard</button>
+      <button class="btn-secondary" onclick="closeInstructions()" style="min-width:160px;">Back to Dashboard</button>
     </div>
   </div>
 </div>
@@ -792,17 +793,52 @@ function exportAll() {
   a.click();
 }
 function importAll(evt) {
-  const file = evt.target.files[0]; if (!file) return;
-  const r = new FileReader();
-  r.onload = e => {
-    try {
-      const arr = JSON.parse(e.target.result);
-      if (!Array.isArray(arr)) throw new Error();
-      saveAll(arr); renderDashboard(); showToast('Imported ' + arr.length + ' interviews ✓');
-    } catch { showToast('Invalid backup file.'); }
-  };
-  r.readAsText(file);
-  evt.target.value = '';
+  const files = Array.from(evt.target.files || []);
+  if (!files.length) return;
+
+  const existing = getAll();
+  const byId = new Map(existing.map(iv => [iv.id, iv]));
+
+  let filesOk = 0, filesBad = 0, added = 0, updated = 0;
+  let pending = files.length;
+
+  files.forEach(file => {
+    const r = new FileReader();
+    r.onload = e => {
+      try {
+        const arr = JSON.parse(e.target.result);
+        if (!Array.isArray(arr)) throw new Error();
+        filesOk++;
+        arr.forEach(iv => {
+          if (!iv || !iv.id) return;
+          if (byId.has(iv.id)) updated++; else added++;
+          byId.set(iv.id, iv);
+        });
+      } catch {
+        filesBad++;
+      }
+      finishIfDone();
+    };
+    r.onerror = () => { filesBad++; finishIfDone(); };
+    r.readAsText(file);
+  });
+
+  function finishIfDone() {
+    pending--;
+    if (pending > 0) return;
+    saveAll(Array.from(byId.values()));
+    renderDashboard();
+    evt.target.value = '';
+
+    if (filesOk === 0) {
+      showToast('No valid backup files found.');
+      return;
+    }
+    let msg = 'Imported ' + filesOk + ' file' + (filesOk === 1 ? '' : 's') +
+               ' (' + added + ' added, ' + updated + ' updated)';
+    if (filesBad > 0) msg += ', ' + filesBad + ' invalid';
+    showToast(msg);
+  }
 }
 
 function clearAll() {
@@ -1699,7 +1735,7 @@ function doneExpandedSig() {
 function toggleMode() {
   const lightMode = document.body.classList.toggle('light-mode');
   document.querySelectorAll('.mode-btn').forEach(btn => {
-    btn.textContent = lightMode ? '\uD83C\uDF19 Dark' : '\u2600\uFE0F Light';
+    btn.textContent = lightMode ? 'Dark' : 'Light';
     btn.title = lightMode ? 'Switch to dark mode' : 'Switch to light mode';
   });
   if (lightMode) {
