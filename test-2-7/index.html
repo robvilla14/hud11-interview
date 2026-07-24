@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <!-- =========================================================================
   HUD-11 Employee Interview Tool
-  v2.7.0  - Direct PDF generation via pdfmake (Generate PDF primary action);
+  v2.7.0 RC7 - Direct PDF generation via pdfmake (Generate PDF primary action);
             legacy browser Print retained for the field-validation cycle.
             Entry-form length guidance counters on Items 5, 6, 7, 13, 14 and
             the address field. In the form, Item 8a shows N/A only when Item 8
@@ -204,36 +204,67 @@ body.light-mode .storage-bar     { background: #C4D0DE; }
 .fsec-body { padding: 16px; }
 .fgrid { display: grid; gap: 12px; }
 .fgrid.cols2 { grid-template-columns: 1fr 1fr; }
-.fgrid.cols3 {
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-}
-
-.fgrid.cols3 > .frow {
-  min-width: 0;
-}
-
-.fgrid.cols3 input {
-  min-width: 0;
-  max-width: 100%;
-}
-
-.fgrid.cols3 input[type="date"] {
-  width: 100%;
-  min-width: 0;
-  display: block;
-}
+.fgrid.cols3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 .fgrid.cols4 { grid-template-columns: 1fr 1fr 1fr 1fr; }
 .frow { display: flex; flex-direction: column; gap: 4px; }
 .fgrid.cols3 .frow { align-self: start; }
 .frow label { font-size: .72rem; font-weight: 700; letter-spacing: .05em; text-transform: uppercase; color: var(--gray); }
 .frow label span.lnum { color: var(--amber); margin-right: 4px; }
-input[type=text], input[type=tel], input[type=email], input[type=date], textarea, select {
+input[type=text], input[type=tel], input[type=email], input[type=date], input[type=number], textarea, select {
   background: #0d1b2a; border: 1px solid var(--navy3); border-radius: 6px; color: var(--white);
   font-family: var(--font); font-size: .9rem; padding: 9px 11px; width: 100%;
   transition: border-color .15s;
 }
 input:focus, textarea:focus, select:focus { outline: none; border-color: var(--amber); }
 textarea { resize: vertical; min-height: 70px; line-height: 1.5; }
+
+/* Item 3 has mixed text, date, and number controls. Keep its sizing isolated
+   from other form grids so native iOS controls cannot force a column wider. */
+.item3-grid {
+  grid-template-columns:
+    minmax(0, 1.35fr)
+    minmax(0, 1fr)
+    minmax(0, .75fr);
+  align-items: start;
+}
+.item3-field,
+.item3-control,
+.item3-field input {
+  min-width: 0;
+  max-width: 100%;
+}
+.item3-control {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+}
+.item3-time-input {
+  flex: 1 1 8rem;
+  width: auto;
+}
+.item3-weekly-hours-input {
+  flex: 0 1 72px;
+  width: 72px;
+}
+.item3-date-input {
+  display: block;
+  width: 100%;
+}
+.item3-daily-control {
+  width: min(100%, 180px);
+}
+.item3-daily-hours-input {
+  flex: 1 1 auto;
+  width: 100%;
+}
+.item3-unit,
+.item3-separator {
+  flex: 0 0 auto;
+  color: var(--gray);
+  font-size: .85rem;
+  white-space: nowrap;
+}
 
 /* Radio / checkbox groups */
 .yn-group { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin-top: 4px; }
@@ -344,6 +375,15 @@ textarea { resize: vertical; min-height: 70px; line-height: 1.5; }
   .qgrid { grid-template-columns: 1fr; }
   .dash-actions { grid-template-columns: 1fr; }
 }
+
+@media (max-width: 700px) {
+  .item3-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .item3-field {
+    width: 100%;
+  }
+}
 </style>
 </head>
 <body>
@@ -394,7 +434,7 @@ textarea { resize: vertical; min-height: 70px; line-height: 1.5; }
     <div id="cardList"></div>
   </div>
 
-  <div class="dash-footer">HUD-11 Interview Tool v2.7.0 | Labor Compliance Solutions | https://github.com/robvilla14</div>
+      <div class="dash-footer">HUD-11 Interview Tool v2.7.0 RC7 | Labor Compliance Solutions | https://github.com/robvilla14</div>
 </div>
 
 <!-- Copy Forward sheet -->
@@ -1008,25 +1048,25 @@ function renderForm() {
 <div class="fsec">
   <div class="fsec-head">${t('secWork')}</div>
   <div class="fsec-body">
-    <div class="fgrid cols3">
-      <div class="frow">
+    <div class="fgrid cols3 item3-grid">
+      <div class="frow item3-field">
         <label><span class="lnum">3a.</span>${t('l3a')}</label>
-        <div style="display:flex;align-items:center;gap:4px">
-          <input type="text" value="${esc(ci.timeOnJob)}" tabindex="101" oninput="currentInterview.timeOnJob=this.value" style="flex:1;min-width:0">
-          <span style="color:var(--gray);font-size:.85rem">/</span>
-          <input type="number" min="0" max="168" step="0.5" value="${ci.avgWeeklyHours||''}" tabindex="104" oninput="currentInterview.avgWeeklyHours=this.value" style="width:52px;min-width:0">
-          <span style="color:var(--gray);font-size:.85rem">hrs/wk</span>
+        <div class="item3-control">
+          <input type="text" value="${esc(ci.timeOnJob)}" class="item3-time-input" tabindex="101" oninput="currentInterview.timeOnJob=this.value">
+          <span class="item3-separator">/</span>
+          <input type="number" min="0" max="168" step="0.5" value="${ci.avgWeeklyHours||''}" class="item3-weekly-hours-input" tabindex="104" oninput="currentInterview.avgWeeklyHours=this.value">
+          <span class="item3-unit">hrs/wk</span>
         </div>
       </div>
-      <div class="frow">
+      <div class="frow item3-field">
         <label><span class="lnum">3b.</span>${t('l3b')}</label>
-        <input type="date" value="${esc(ci.lastDate)}" tabindex="102" oninput="currentInterview.lastDate=this.value">
+        <input type="date" value="${esc(ci.lastDate)}" class="item3-date-input" tabindex="102" oninput="currentInterview.lastDate=this.value">
       </div>
-      <div class="frow">
+      <div class="frow item3-field">
         <label><span class="lnum">3c.</span>${t('l3c')}</label>
-        <div style="display:flex;align-items:center;gap:8px">
-          <input type="number" min="0" max="24" step="0.5" value="${ci.hoursLastDay||''}" class="hours-input" tabindex="103" oninput="currentInterview.hoursLastDay=this.value">
-          <span style="color:var(--gray);font-size:.85rem">hrs</span>
+        <div class="item3-control item3-daily-control">
+          <input type="number" min="0" max="24" step="0.5" value="${ci.hoursLastDay||''}" class="hours-input item3-daily-hours-input" tabindex="103" oninput="currentInterview.hoursLastDay=this.value">
+          <span class="item3-unit">hrs</span>
         </div>
       </div>
     </div>
