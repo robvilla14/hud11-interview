@@ -204,7 +204,24 @@ body.light-mode .storage-bar     { background: #C4D0DE; }
 .fsec-body { padding: 16px; }
 .fgrid { display: grid; gap: 12px; }
 .fgrid.cols2 { grid-template-columns: 1fr 1fr; }
-.fgrid.cols3 { grid-template-columns: 1fr 1fr 1fr; }
+.fgrid.cols3 {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.fgrid.cols3 > .frow {
+  min-width: 0;
+}
+
+.fgrid.cols3 input {
+  min-width: 0;
+  max-width: 100%;
+}
+
+.fgrid.cols3 input[type="date"] {
+  width: 100%;
+  min-width: 0;
+  display: block;
+}
 .fgrid.cols4 { grid-template-columns: 1fr 1fr 1fr 1fr; }
 .frow { display: flex; flex-direction: column; gap: 4px; }
 .fgrid.cols3 .frow { align-self: start; }
@@ -994,9 +1011,10 @@ function renderForm() {
     <div class="fgrid cols3">
       <div class="frow">
         <label><span class="lnum">3a.</span>${t('l3a')}</label>
-        <div style="display:flex;align-items:center;gap:6px">
-          <input type="text" value="${esc(ci.timeOnJob)}" tabindex="101" oninput="currentInterview.timeOnJob=this.value" style="flex:1">
-          <input type="number" min="0" max="168" step="0.5" value="${ci.avgWeeklyHours||''}" class="hours-input" tabindex="104" oninput="currentInterview.avgWeeklyHours=this.value">
+        <div style="display:flex;align-items:center;gap:4px">
+          <input type="text" value="${esc(ci.timeOnJob)}" tabindex="101" oninput="currentInterview.timeOnJob=this.value" style="flex:1;min-width:0">
+          <span style="color:var(--gray);font-size:.85rem">/</span>
+          <input type="number" min="0" max="168" step="0.5" value="${ci.avgWeeklyHours||''}" tabindex="104" oninput="currentInterview.avgWeeklyHours=this.value" style="width:52px;min-width:0">
           <span style="color:var(--gray);font-size:.85rem">hrs/wk</span>
         </div>
       </div>
