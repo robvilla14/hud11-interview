@@ -4,8 +4,9 @@
   v2.7.0  - Direct PDF generation via pdfmake (Generate PDF primary action);
             legacy browser Print retained for the field-validation cycle.
             Entry-form length guidance counters on Items 5, 6, 7, 13, 14 and
-            the address field. Item 8a now offers official Yes/No only
-            (legacy "na" records remain valid; PDF renders neither box).
+            the address field. In the form, Item 8a shows N/A only when Item 8
+            is No and Yes/No only when Item 8 is Yes. The PDF keeps the
+            official Yes/No boxes and renders neither box for stored "na".
             Revised signature workflow: tap the signature field to open the
             enlarged pad; changes commit only on Submit Signature.
   v2.5.x  - Multi-file import with deduplication (see repository CHANGELOG.md
@@ -79,6 +80,8 @@ body.light-mode .payroll-notice {
 }
 
 /* Section form body hardcoded bg */
+body.light-mode #formView  { background: #E8ECF4; }
+body.light-mode .form-body { background: #E8ECF4; }
 body.light-mode .fsec { background: #FFFFFF; }
 body.light-mode .fsec-head { background: #E0E8F0; }
 
@@ -114,6 +117,7 @@ body.light-mode .storage-bar     { background: #C4D0DE; }
 
 /* Keyboard language tip */
 .lang-tip {
+  display: none;
   font-size: 0.72rem;
   color: var(--gray);
   margin-top: 4px;
@@ -188,6 +192,7 @@ body.light-mode .storage-bar     { background: #C4D0DE; }
 .form-header .back-btn { background: none; border: 1px solid var(--amber); color: var(--amber); border-radius: 6px; padding: 7px 12px; font-size: .85rem; cursor: pointer; font-weight: 700; }
 .form-header .form-title { font-weight: 700; font-size: 1rem; color: var(--amber); flex: 1; }
 .lang-toggle { display: flex; border: 1px solid var(--navy3); border-radius: 6px; overflow: hidden; }
+.lang-wrap { min-width: 330px; }
 .lang-btn { padding: 7px 14px; font-size: .8rem; font-weight: 700; cursor: pointer; border: none; background: var(--navy3); color: var(--gray); transition: all .15s; }
 .lang-btn.active { background: var(--amber); color: var(--navy); }
 .form-header .save-btn { background: var(--green); color: #fff; border: none; border-radius: 6px; padding: 7px 14px; font-size: .85rem; font-weight: 700; cursor: pointer; }
@@ -202,6 +207,7 @@ body.light-mode .storage-bar     { background: #C4D0DE; }
 .fgrid.cols3 { grid-template-columns: 1fr 1fr 1fr; }
 .fgrid.cols4 { grid-template-columns: 1fr 1fr 1fr 1fr; }
 .frow { display: flex; flex-direction: column; gap: 4px; }
+.fgrid.cols3 .frow { align-self: start; }
 .frow label { font-size: .72rem; font-weight: 700; letter-spacing: .05em; text-transform: uppercase; color: var(--gray); }
 .frow label span.lnum { color: var(--amber); margin-right: 4px; }
 input[type=text], input[type=tel], input[type=email], input[type=date], textarea, select {
@@ -231,6 +237,37 @@ textarea { resize: vertical; min-height: 70px; line-height: 1.5; }
 
 /* Signature canvas */
 .sig-wrap { border: 1px solid var(--navy3); border-radius: 6px; overflow: hidden; background: #fff; position: relative; }
+#sigExpandedOverlay {
+  position: fixed; inset: 0; z-index: 300;
+  background: rgba(0,0,0,.78);
+  display: flex; align-items: center; justify-content: center;
+}
+.sig-expanded-inner {
+  background: var(--navy2); border: 2px solid var(--amber);
+  border-radius: 12px; padding: 20px; width: 90%; max-width: 600px;
+  display: flex; flex-direction: column; gap: 12px;
+}
+.sig-expanded-title {
+  font-size: 1rem; font-weight: 700; color: var(--amber); text-align: center;
+}
+.sig-expanded-canvas {
+  width: 100%; border-radius: 6px; background: #fff;
+  cursor: crosshair; touch-action: none;
+}
+.sig-expanded-btns {
+  display: flex; gap: 10px; justify-content: flex-end;
+}
+.sig-btn-clear {
+  padding: 8px 18px; border-radius: 6px; border: 1px solid var(--navy3);
+  background: transparent; color: var(--light); cursor: pointer; font-size: .9rem;
+}
+.sig-btn-clear:hover { border-color: var(--amber); color: var(--amber); }
+.sig-btn-done {
+  padding: 8px 22px; border-radius: 6px; border: none;
+  background: var(--amber); color: var(--navy); font-weight: 700;
+  cursor: pointer; font-size: .9rem;
+}
+.sig-btn-done:hover { background: var(--amber2); }
 .sig-canvas { display: block; touch-action: none; width: 100%; cursor: crosshair; }
 .sig-controls { display: flex; gap: 8px; margin-top: 6px; }
 .sig-btn { font-size: .72rem; padding: 4px 10px; border-radius: 4px; border: 1px solid var(--navy3); background: transparent; color: var(--gray); cursor: pointer; }
@@ -359,7 +396,7 @@ textarea { resize: vertical; min-height: 70px; line-height: 1.5; }
     <div class="form-header-inner">
       <button class="back-btn" onclick="goBack()">Back</button>
       <div class="form-title" id="formTitle">New Interview</div>
-      <div>
+      <div class="lang-wrap">
         <div class="lang-toggle">
           <button class="lang-btn active" id="btnEN" onclick="setLang('en')">EN</button>
           <button class="lang-btn" id="btnES" onclick="setLang('es')">ES</button>
@@ -470,7 +507,7 @@ const STRINGS = {
     l3a: 'How long on this job?',
     l3aHrs: 'Avg. weekly hours',
     l3b: 'Last date on this job before today?',
-    l3c: 'Number of hours last day on this job?',
+    l3c: 'Hours last day on this job?',
     l4a: 'Hourly Rate of Pay',
     l4b: 'Fringe Benefits?',
     l4bMed: 'Medical',
@@ -552,7 +589,7 @@ const STRINGS = {
     l3a: '¿Cuánto tiempo lleva en este trabajo?',
     l3aHrs: 'Promedio de horas semanales',
     l3b: '¿Última fecha en este trabajo antes de hoy?',
-    l3c: '¿Cuántas horas en su último día en este trabajo?',
+    l3c: '¿Horas en su último día en este trabajo?',
     l4a: 'Salario por Hora',
     l4b: '¿Beneficios Complementarios?',
     l4bMed: 'Seguro Médico',
@@ -926,11 +963,11 @@ function renderForm() {
     <div class="fgrid cols2" style="margin-top:10px">
       <div class="frow">
         <label><span class="lnum">2b.</span>${t('l2bPhone')}</label>
-        <input type="text" inputmode="numeric" value="${esc(ci.empPhone)}" placeholder="(916) 555-1234" oninput="currentInterview.empPhone=fmtPhone(this.value);this.value=currentInterview.empPhone">
+        <input type="text" inputmode="numeric" value="${esc(ci.empPhone)}" oninput="currentInterview.empPhone=fmtPhone(this.value);this.value=currentInterview.empPhone">
       </div>
       <div class="frow">
         <label><span class="lnum">2b.</span>${t('l2bEmail')}</label>
-        <input type="email" value="${esc(ci.empEmail)}" list="emailDomains" placeholder="name@gmail.com" oninput="currentInterview.empEmail=this.value;updateEmailList(this.value)">
+        <input type="email" value="${esc(ci.empEmail)}" list="emailDomains" oninput="currentInterview.empEmail=this.value;updateEmailList(this.value)">
         <datalist id="emailDomains"></datalist>
       </div>
     </div>
@@ -957,11 +994,10 @@ function renderForm() {
     <div class="fgrid cols3">
       <div class="frow">
         <label><span class="lnum">3a.</span>${t('l3a')}</label>
-        <input type="text" value="${esc(ci.timeOnJob)}" placeholder="e.g. 2 weeks" tabindex="101" oninput="currentInterview.timeOnJob=this.value">
-        <label style="margin-top:8px">${t('l3aHrs')}</label>
-        <div style="display:flex;align-items:center;gap:8px">
-          <input type="number" min="0" max="168" step="0.5" value="${ci.avgWeeklyHours||''}" placeholder="40" class="hours-input" tabindex="104" oninput="currentInterview.avgWeeklyHours=this.value">
-          <span style="color:var(--gray);font-size:.85rem">hrs</span>
+        <div style="display:flex;align-items:center;gap:6px">
+          <input type="text" value="${esc(ci.timeOnJob)}" tabindex="101" oninput="currentInterview.timeOnJob=this.value" style="flex:1">
+          <input type="number" min="0" max="168" step="0.5" value="${ci.avgWeeklyHours||''}" class="hours-input" tabindex="104" oninput="currentInterview.avgWeeklyHours=this.value">
+          <span style="color:var(--gray);font-size:.85rem">hrs/wk</span>
         </div>
       </div>
       <div class="frow">
@@ -971,7 +1007,7 @@ function renderForm() {
       <div class="frow">
         <label><span class="lnum">3c.</span>${t('l3c')}</label>
         <div style="display:flex;align-items:center;gap:8px">
-          <input type="number" min="0" max="24" step="0.5" value="${ci.hoursLastDay||''}" placeholder="8" class="hours-input" tabindex="103" oninput="currentInterview.hoursLastDay=this.value">
+          <input type="number" min="0" max="24" step="0.5" value="${ci.hoursLastDay||''}" class="hours-input" tabindex="103" oninput="currentInterview.hoursLastDay=this.value">
           <span style="color:var(--gray);font-size:.85rem">hrs</span>
         </div>
       </div>
@@ -979,7 +1015,7 @@ function renderForm() {
     <div class="fgrid" style="margin-top:10px">
       <div class="frow">
         <label><span class="lnum">4a.</span>${t('l4a')}</label>
-        <input type="text" value="${esc(ci.hourlyRate)}" placeholder="$ 0.00" tabindex="105" oninput="currentInterview.hourlyRate=this.value" style="max-width:180px">
+        <input type="text" value="${esc(ci.hourlyRate)}" tabindex="105" oninput="currentInterview.hourlyRate=this.value" style="max-width:180px">
       </div>
     </div>
     <!-- Fringe -->
@@ -1048,8 +1084,9 @@ function renderForm() {
       <div class="qblock" id="qblock8a">
         <div class="qlabel"><strong>8a.</strong> ${t('l8a')}</div>
         <div class="yn-group">
-          ${ynRadio('apprenticeCert', t('yes'), 'yes', ci.apprenticeCert)}
-          ${ynRadio('apprenticeCert', t('no'), 'no', ci.apprenticeCert)}
+          ${ci.apprentice === 'no' ? ynRadio('apprenticeCert', t('na'), 'na', ci.apprenticeCert) : ''}
+          ${ci.apprentice !== 'no' ? ynRadio('apprenticeCert', t('yes'), 'yes', ci.apprenticeCert) : ''}
+          ${ci.apprentice !== 'no' ? ynRadio('apprenticeCert', t('no'), 'no', ci.apprenticeCert) : ''}
         </div>
         ${ci.apprentice === 'yes' ? `<div style="margin-top:10px">
           <div class="yn-label" style="font-size:.72rem;margin-bottom:6px">${t('l8aPhoto')}</div>
@@ -1157,8 +1194,7 @@ function renderForm() {
 <div style="padding:20px 0;text-align:center;">
   <button class="btn-primary" style="margin:0 8px;min-width:140px" onclick="saveInterview()">Save Interview</button>
   <button class="btn-primary" style="margin:0 8px;min-width:140px" onclick="generateHud11Pdf(currentInterview.id,'download')">Generate PDF</button>
-  <button class="btn-secondary" style="margin:0 8px" onclick="generateHud11Pdf(currentInterview.id,'open')">Open PDF</button>
-  <button class="btn-secondary" style="margin:0 8px" onclick="triggerPrint(currentInterview.id)">Print (Legacy)</button>
+  <button class="btn-secondary" style="margin:0 8px" onclick="generateHud11Pdf(currentInterview.id,'open')">Open in Browser</button>
 </div>
 `;
   // Restore canvas signatures
@@ -1628,6 +1664,7 @@ function showToast(msg) {
 }
 
 // ── INIT ──────────────────────────────────────────────────────────
+initLightMode();
 renderDashboard();
 
 // ── PHONE FORMAT ─────────────────────────────────────────────────
@@ -1723,6 +1760,16 @@ function _expandCanvasIsBlank(canvas) {
 
 
 // ── LIGHT/DARK MODE TOGGLE ────────────────────────────────────────────────────
+function initLightMode() {
+  if (localStorage.getItem('hud11LightMode') === 'enabled') {
+    document.body.classList.add('light-mode');
+    document.querySelectorAll('.mode-btn').forEach(btn => {
+      btn.textContent = 'Dark';
+      btn.title = 'Switch to dark mode';
+    });
+  }
+}
+
 function toggleMode() {
   const lightMode = document.body.classList.toggle('light-mode');
   document.querySelectorAll('.mode-btn').forEach(btn => {
@@ -1741,8 +1788,10 @@ function updateLangTip(lang) {
   const tip = document.getElementById('langTip');
   if (!tip) return;
   if (lang === 'es') {
+    tip.style.display = 'block';
     tip.textContent = 'Tip: Switch your device keyboard language to Spanish before typing.';
   } else {
+    tip.style.display = 'none';
     tip.textContent = '';
   }
 }
@@ -1773,7 +1822,7 @@ let _pdfReady = false;
     _pdfReady = true;
   }).catch(err => {
     console.error('PDF font init failed:', err);
-    showToast('PDF engine failed to load - use Print (Legacy)');
+    showToast('PDF engine failed to load. Try reloading the page.');
   });
 })();
 
@@ -1785,7 +1834,7 @@ function mapInterviewForPdf(ci) {
     contractor: ci.contractor,
     employeeName: ci.empName, phone: ci.empPhone, email: ci.empEmail,
     address: ci.empAddress, idVerified: ci.empIdVerified,
-    timeOnJob: [ci.timeOnJob, ci.avgWeeklyHours].filter(Boolean).join(' / '),
+    timeOnJob: [ci.timeOnJob, ci.avgWeeklyHours ? ci.avgWeeklyHours + ' hrs/wk' : ''].filter(Boolean).join(' / '),
     lastDate: ci.lastDate, hoursLastDay: ci.hoursLastDay,
     hourlyRate: ci.hourlyRate,
     fringeMedical: ci.fringeMedical, fringePension: ci.fringePension,
@@ -1825,7 +1874,7 @@ function generateHud11Pdf(id, mode) {
     }
   } catch (err) {
     console.error('PDF generation failed:', err);
-    showToast('PDF generation failed - use Print (Legacy)');
+    showToast('PDF generation failed. Try reloading the page.');
   }
 }
 
