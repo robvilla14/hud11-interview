@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <!-- =========================================================================
   HUD-11 Employee Interview Tool
-  v2.7.0 RC7 - Direct PDF generation via pdfmake (Generate PDF primary action);
+  v2.7.0 RC8 - Direct PDF generation via pdfmake (Generate PDF primary action);
             legacy browser Print retained for the field-validation cycle.
             Entry-form length guidance counters on Items 5, 6, 7, 13, 14 and
             the address field. In the form, Item 8a shows N/A only when Item 8
@@ -239,13 +239,31 @@ textarea { resize: vertical; min-height: 70px; line-height: 1.5; }
   gap: 6px;
   width: 100%;
 }
-.item3-time-input {
-  flex: 1 1 8rem;
-  width: auto;
+.item3-duration-control {
+  display: grid;
+  grid-template-columns:
+    minmax(52px, 1fr)
+    96px
+    auto
+    minmax(52px, .65fr)
+    auto;
+  align-items: center;
+  gap: 6px;
+}
+.item3-duration-input,
+.item3-duration-unit,
+.item3-weekly-hours-input {
+  min-width: 0;
+  max-width: 100%;
+}
+.item3-duration-input {
+  width: 100%;
+}
+.item3-duration-unit {
+  width: 96px;
 }
 .item3-weekly-hours-input {
-  flex: 0 1 72px;
-  width: 72px;
+  width: 100%;
 }
 .item3-date-input {
   display: block;
@@ -384,6 +402,21 @@ textarea { resize: vertical; min-height: 70px; line-height: 1.5; }
     width: 100%;
   }
 }
+
+@media (max-width: 360px) {
+  .item3-duration-control {
+    grid-template-columns:
+      minmax(44px, 1fr)
+      88px
+      auto
+      minmax(44px, .65fr)
+      auto;
+    gap: 4px;
+  }
+  .item3-duration-unit {
+    width: 88px;
+  }
+}
 </style>
 </head>
 <body>
@@ -434,7 +467,7 @@ textarea { resize: vertical; min-height: 70px; line-height: 1.5; }
     <div id="cardList"></div>
   </div>
 
-      <div class="dash-footer">HUD-11 Interview Tool v2.7.0 RC7 | Labor Compliance Solutions | https://github.com/robvilla14</div>
+      <div class="dash-footer">HUD-11 Interview Tool v2.7.0 RC8 | Labor Compliance Solutions | https://github.com/robvilla14</div>
 </div>
 
 <!-- Copy Forward sheet -->
@@ -563,6 +596,10 @@ const STRINGS = {
     l2d: 'Verification of Identification?',
     l3a: 'How long on this job?',
     l3aHrs: 'Avg. weekly hours',
+    durationUnit: 'Unit',
+    days: 'Days',
+    weeks: 'Weeks',
+    months: 'Months',
     l3b: 'Last date on this job before today?',
     l3c: 'Hours last day on this job?',
     l4a: 'Hourly Rate of Pay',
@@ -645,6 +682,10 @@ const STRINGS = {
     l2d: '¿Verificación de Identificación?',
     l3a: '¿Cuánto tiempo lleva en este trabajo?',
     l3aHrs: 'Promedio de horas semanales',
+    durationUnit: 'Unidad',
+    days: 'Días',
+    weeks: 'Semanas',
+    months: 'Meses',
     l3b: '¿Última fecha en este trabajo antes de hoy?',
     l3c: '¿Horas en su último día en este trabajo?',
     l4a: 'Salario por Hora',
@@ -719,7 +760,7 @@ function blankInterview() {
     lang: 'en',
     projectName: '', projectNumber: '', contractor: '',
     empName: '', empPhone: '', empEmail: '', empAddress: '', empIdVerified: '',
-    timeOnJob: '', avgWeeklyHours: '', lastDate: '', hoursLastDay: '',
+    timeOnJob: '', timeOnJobUnit: '', avgWeeklyHours: '', lastDate: '', hoursLastDay: '',
     hourlyRate: '', fringeMedical: '', fringePension: '', payFrequency: '',
     classifications: '', duties: '', tools: '',
     apprentice: '', apprenticeCert: '', apprenticeCertPhoto: '', paidAllHours: '', overtime: '', threatened: '',
@@ -976,9 +1017,53 @@ function updateLangBtns() {
 }
 function t(key) { return (STRINGS[currentLang] || STRINGS.en)[key] || key; }
 
+// Item 3a stores the duration value and unit separately. Legacy records that
+// stored values such as "1 week" remain readable and are split for display.
+function getTimeOnJobParts(iv) {
+  const raw = String(iv.timeOnJob || '').trim();
+  const aliases = {
+    day: 'days', days: 'days', d: 'days', día: 'days', dias: 'days', días: 'days',
+    week: 'weeks', weeks: 'weeks', wk: 'weeks', wks: 'weeks', semana: 'weeks', semanas: 'weeks',
+    month: 'months', months: 'months', mo: 'months', mos: 'months', mes: 'months', meses: 'months'
+  };
+  const storedUnit = aliases[String(iv.timeOnJobUnit || '').trim().toLowerCase()] || '';
+  const match = raw.match(/^(\d+(?:\.\d+)?)\s*([A-Za-zÀ-ÿ]+)\.?$/);
+  const legacyUnit = match ? aliases[match[2].toLowerCase()] || '' : '';
+  return {
+    value: match && legacyUnit ? match[1] : raw,
+    unit: storedUnit || legacyUnit
+  };
+}
+
+function formatTimeOnJob(iv) {
+  const parts = getTimeOnJobParts(iv);
+  if (!parts.value) return '';
+  if (!parts.unit) return parts.value;
+  const singular = Number(parts.value) === 1;
+  const lang = iv.lang || currentLang || 'en';
+  const labels = lang === 'es'
+    ? { days: singular ? 'día' : 'días', weeks: singular ? 'semana' : 'semanas', months: singular ? 'mes' : 'meses' }
+    : { days: singular ? 'day' : 'days', weeks: singular ? 'week' : 'weeks', months: singular ? 'month' : 'months' };
+  return parts.value + ' ' + labels[parts.unit];
+}
+
+function durationUnitOptions(selected) {
+  return [
+    `<option value="">${t('durationUnit')}</option>`,
+    `<option value="days"${selected === 'days' ? ' selected' : ''}>${t('days')}</option>`,
+    `<option value="weeks"${selected === 'weeks' ? ' selected' : ''}>${t('weeks')}</option>`,
+    `<option value="months"${selected === 'months' ? ' selected' : ''}>${t('months')}</option>`
+  ].join('');
+}
+
 // ── FORM RENDER ───────────────────────────────────────────────────
 function renderForm() {
   const ci = currentInterview;
+  const timeOnJobParts = getTimeOnJobParts(ci);
+  if (timeOnJobParts.unit && !ci.timeOnJobUnit) {
+    ci.timeOnJob = timeOnJobParts.value;
+    ci.timeOnJobUnit = timeOnJobParts.unit;
+  }
   const b = document.getElementById('formBody');
   document.getElementById('formTitle').textContent = ci.empName || (currentLang==='es' ? 'Nueva Entrevista' : 'New Interview');
 
@@ -1051,21 +1136,24 @@ function renderForm() {
     <div class="fgrid cols3 item3-grid">
       <div class="frow item3-field">
         <label><span class="lnum">3a.</span>${t('l3a')}</label>
-        <div class="item3-control">
-          <input type="text" value="${esc(ci.timeOnJob)}" class="item3-time-input" tabindex="101" oninput="currentInterview.timeOnJob=this.value">
+        <div class="item3-duration-control">
+          <input type="number" min="0" step="0.5" inputmode="decimal" aria-label="${t('l3a')}" value="${esc(timeOnJobParts.value)}" class="item3-duration-input" tabindex="101" oninput="currentInterview.timeOnJob=this.value">
+          <select class="item3-duration-unit" aria-label="${t('durationUnit')}" tabindex="102" onchange="currentInterview.timeOnJobUnit=this.value">
+            ${durationUnitOptions(timeOnJobParts.unit)}
+          </select>
           <span class="item3-separator">/</span>
-          <input type="number" min="0" max="168" step="0.5" value="${ci.avgWeeklyHours||''}" class="item3-weekly-hours-input" tabindex="104" oninput="currentInterview.avgWeeklyHours=this.value">
-          <span class="item3-unit">hrs/wk</span>
+          <input type="number" min="0" max="168" step="0.5" inputmode="decimal" aria-label="${t('l3aHrs')}" value="${ci.avgWeeklyHours||''}" class="item3-weekly-hours-input" tabindex="103" oninput="currentInterview.avgWeeklyHours=this.value">
+          <span class="item3-unit">hrs</span>
         </div>
       </div>
       <div class="frow item3-field">
         <label><span class="lnum">3b.</span>${t('l3b')}</label>
-        <input type="date" value="${esc(ci.lastDate)}" class="item3-date-input" tabindex="102" oninput="currentInterview.lastDate=this.value">
+        <input type="date" value="${esc(ci.lastDate)}" class="item3-date-input" tabindex="104" oninput="currentInterview.lastDate=this.value">
       </div>
       <div class="frow item3-field">
         <label><span class="lnum">3c.</span>${t('l3c')}</label>
         <div class="item3-control item3-daily-control">
-          <input type="number" min="0" max="24" step="0.5" value="${ci.hoursLastDay||''}" class="hours-input item3-daily-hours-input" tabindex="103" oninput="currentInterview.hoursLastDay=this.value">
+          <input type="number" min="0" max="24" step="0.5" value="${ci.hoursLastDay||''}" class="hours-input item3-daily-hours-input" tabindex="105" oninput="currentInterview.hoursLastDay=this.value">
           <span class="item3-unit">hrs</span>
         </div>
       </div>
@@ -1465,7 +1553,7 @@ function buildAndPrint(iv) {
           <tr>
             <td style="border:none;border-right:1pt solid #000;padding:2pt 3pt;width:25%;vertical-align:top">
               <span class="pr-field-label">3a. ${s.l3a}</span>
-              <span class="pr-field-val" style="min-height:16pt;display:block">${esc(iv.timeOnJob)}${iv.avgWeeklyHours ? " / " + iv.avgWeeklyHours + " hrs/wk" : ""}</span>
+              <span class="pr-field-val" style="min-height:16pt;display:block">${esc(formatTimeOnJob(iv))}${iv.avgWeeklyHours ? " / " + iv.avgWeeklyHours + " hrs" : ""}</span>
             </td>
             <td style="border:none;border-right:1pt solid #000;padding:2pt 3pt;width:25%;vertical-align:top">
               <span class="pr-field-label">3b. ${s.l3b}</span>
@@ -1885,14 +1973,14 @@ let _pdfReady = false;
 })();
 
 // Map stored interview fields -> builder canonical fields.
-// 3a combines timeOnJob and avgWeeklyHours exactly as the legacy print did.
+// 3a joins the separately stored duration, duration unit, and weekly hours.
 function mapInterviewForPdf(ci) {
   return {
     projectName: ci.projectName, projectNumber: ci.projectNumber,
     contractor: ci.contractor,
     employeeName: ci.empName, phone: ci.empPhone, email: ci.empEmail,
     address: ci.empAddress, idVerified: ci.empIdVerified,
-    timeOnJob: [ci.timeOnJob, ci.avgWeeklyHours ? ci.avgWeeklyHours + ' hrs/wk' : ''].filter(Boolean).join(' / '),
+    timeOnJob: [formatTimeOnJob(ci), ci.avgWeeklyHours ? ci.avgWeeklyHours + ' hrs' : ''].filter(Boolean).join(' / '),
     lastDate: ci.lastDate, hoursLastDay: ci.hoursLastDay,
     hourlyRate: ci.hourlyRate,
     fringeMedical: ci.fringeMedical, fringePension: ci.fringePension,
