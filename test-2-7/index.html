@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <!-- =========================================================================
   HUD-11 Employee Interview Tool
-  v2.7.0 RC8 - Direct PDF generation via pdfmake (Generate PDF primary action);
+  v2.7.0 RC9 - Direct PDF generation via pdfmake (Generate PDF primary action);
             legacy browser Print retained for the field-validation cycle.
             Entry-form length guidance counters on Items 5, 6, 7, 13, 14 and
             the address field. In the form, Item 8a shows N/A only when Item 8
@@ -218,13 +218,13 @@ input[type=text], input[type=tel], input[type=email], input[type=date], input[ty
 input:focus, textarea:focus, select:focus { outline: none; border-color: var(--amber); }
 textarea { resize: vertical; min-height: 70px; line-height: 1.5; }
 
-/* Item 3 has mixed text, date, and number controls. Keep its sizing isolated
+/* Item 3 has mixed text, select, and date controls. Keep its sizing isolated
    from other form grids so native iOS controls cannot force a column wider. */
 .item3-grid {
   grid-template-columns:
-    minmax(0, 1.35fr)
+    minmax(0, 1.55fr)
     minmax(0, 1fr)
-    minmax(0, .75fr);
+    minmax(0, .7fr);
   align-items: start;
 }
 .item3-field,
@@ -242,11 +242,11 @@ textarea { resize: vertical; min-height: 70px; line-height: 1.5; }
 .item3-duration-control {
   display: grid;
   grid-template-columns:
-    minmax(52px, 1fr)
-    96px
+    minmax(72px, 1.1fr)
+    104px
     auto
-    minmax(52px, .65fr)
-    auto;
+    minmax(64px, .8fr)
+    minmax(48px, auto);
   align-items: center;
   gap: 6px;
 }
@@ -260,7 +260,7 @@ textarea { resize: vertical; min-height: 70px; line-height: 1.5; }
   width: 100%;
 }
 .item3-duration-unit {
-  width: 96px;
+  width: 104px;
 }
 .item3-weekly-hours-input {
   width: 100%;
@@ -282,6 +282,12 @@ textarea { resize: vertical; min-height: 70px; line-height: 1.5; }
   color: var(--gray);
   font-size: .85rem;
   white-space: nowrap;
+}
+.item3-side-label {
+  color: var(--gray);
+  font-size: .72rem;
+  line-height: 1.15;
+  white-space: normal;
 }
 
 /* Radio / checkbox groups */
@@ -406,11 +412,11 @@ textarea { resize: vertical; min-height: 70px; line-height: 1.5; }
 @media (max-width: 360px) {
   .item3-duration-control {
     grid-template-columns:
-      minmax(44px, 1fr)
+      minmax(50px, 1fr)
       88px
       auto
       minmax(44px, .65fr)
-      auto;
+      minmax(46px, auto);
     gap: 4px;
   }
   .item3-duration-unit {
@@ -467,7 +473,7 @@ textarea { resize: vertical; min-height: 70px; line-height: 1.5; }
     <div id="cardList"></div>
   </div>
 
-      <div class="dash-footer">HUD-11 Interview Tool v2.7.0 RC8 | Labor Compliance Solutions | https://github.com/robvilla14</div>
+      <div class="dash-footer">HUD-11 Interview Tool v2.7.0 RC9 | Labor Compliance Solutions | https://github.com/robvilla14</div>
 </div>
 
 <!-- Copy Forward sheet -->
@@ -1137,13 +1143,13 @@ function renderForm() {
       <div class="frow item3-field">
         <label><span class="lnum">3a.</span>${t('l3a')}</label>
         <div class="item3-duration-control">
-          <input type="number" min="0" step="0.5" inputmode="decimal" aria-label="${t('l3a')}" value="${esc(timeOnJobParts.value)}" class="item3-duration-input" tabindex="101" oninput="currentInterview.timeOnJob=this.value">
+          <input type="text" inputmode="decimal" aria-label="${t('l3a')}" value="${esc(timeOnJobParts.value)}" class="item3-duration-input" tabindex="101" oninput="currentInterview.timeOnJob=this.value">
           <select class="item3-duration-unit" aria-label="${t('durationUnit')}" tabindex="102" onchange="currentInterview.timeOnJobUnit=this.value">
             ${durationUnitOptions(timeOnJobParts.unit)}
           </select>
           <span class="item3-separator">/</span>
-          <input type="number" min="0" max="168" step="0.5" inputmode="decimal" aria-label="${t('l3aHrs')}" value="${ci.avgWeeklyHours||''}" class="item3-weekly-hours-input" tabindex="103" oninput="currentInterview.avgWeeklyHours=this.value">
-          <span class="item3-unit">hrs</span>
+          <input type="text" inputmode="decimal" aria-label="${t('l3aHrs')}" value="${esc(ci.avgWeeklyHours||'')}" class="item3-weekly-hours-input" tabindex="103" oninput="currentInterview.avgWeeklyHours=this.value">
+          <span class="item3-side-label">${t('l3aHrs')}</span>
         </div>
       </div>
       <div class="frow item3-field">
@@ -1153,7 +1159,7 @@ function renderForm() {
       <div class="frow item3-field">
         <label><span class="lnum">3c.</span>${t('l3c')}</label>
         <div class="item3-control item3-daily-control">
-          <input type="number" min="0" max="24" step="0.5" value="${ci.hoursLastDay||''}" class="hours-input item3-daily-hours-input" tabindex="105" oninput="currentInterview.hoursLastDay=this.value">
+          <input type="text" inputmode="decimal" value="${esc(ci.hoursLastDay||'')}" class="hours-input item3-daily-hours-input" tabindex="105" oninput="currentInterview.hoursLastDay=this.value">
           <span class="item3-unit">hrs</span>
         </div>
       </div>
