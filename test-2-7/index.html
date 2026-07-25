@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <!-- =========================================================================
   HUD-11 Employee Interview Tool
-  v2.7.0 RC9 - Direct PDF generation via pdfmake (Generate PDF primary action);
+  v2.7.0 RC10 - Direct PDF generation via pdfmake (Generate PDF primary action);
             legacy browser Print retained for the field-validation cycle.
             Entry-form length guidance counters on Items 5, 6, 7, 13, 14 and
             the address field. In the form, Item 8a shows N/A only when Item 8
@@ -221,10 +221,7 @@ textarea { resize: vertical; min-height: 70px; line-height: 1.5; }
 /* Item 3 has mixed text, select, and date controls. Keep its sizing isolated
    from other form grids so native iOS controls cannot force a column wider. */
 .item3-grid {
-  grid-template-columns:
-    minmax(0, 1.55fr)
-    minmax(0, 1fr)
-    minmax(0, .7fr);
+  grid-template-columns: minmax(0, 1fr);
   align-items: start;
 }
 .item3-field,
@@ -242,13 +239,14 @@ textarea { resize: vertical; min-height: 70px; line-height: 1.5; }
 .item3-duration-control {
   display: grid;
   grid-template-columns:
-    minmax(72px, 1.1fr)
-    104px
+    minmax(120px, 160px)
+    minmax(130px, 180px)
     auto
-    minmax(64px, .8fr)
-    minmax(48px, auto);
+    minmax(100px, 130px)
+    minmax(92px, auto);
   align-items: center;
   gap: 6px;
+  justify-content: start;
 }
 .item3-duration-input,
 .item3-duration-unit,
@@ -260,14 +258,19 @@ textarea { resize: vertical; min-height: 70px; line-height: 1.5; }
   width: 100%;
 }
 .item3-duration-unit {
-  width: 104px;
+  width: 100%;
 }
 .item3-weekly-hours-input {
   width: 100%;
 }
+.item3-secondary-row {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
 .item3-date-input {
   display: block;
-  width: 100%;
+  width: min(100%, 260px);
 }
 .item3-daily-control {
   width: min(100%, 180px);
@@ -401,26 +404,70 @@ textarea { resize: vertical; min-height: 70px; line-height: 1.5; }
 }
 
 @media (max-width: 700px) {
-  .item3-grid {
-    grid-template-columns: minmax(0, 1fr);
+  .form-header {
+    padding: 0 12px;
+  }
+  .form-header-inner {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    gap: 8px;
+    padding: 10px 0;
+  }
+  .form-header-inner > .back-btn {
+    grid-column: 1;
+    grid-row: 1;
+  }
+  .form-header-inner > .form-title {
+    grid-column: 2;
+    grid-row: 1;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .form-header-inner > .save-btn {
+    grid-column: 3;
+    grid-row: 1;
+  }
+  .form-header-inner > .lang-wrap {
+    grid-column: 1 / 3;
+    grid-row: 2;
+    min-width: 0;
+    width: 100%;
+  }
+  .form-header-inner > .lang-wrap .lang-toggle {
+    width: 100%;
+  }
+  .form-header-inner > .lang-wrap .lang-btn {
+    flex: 1 1 50%;
+  }
+  .form-header-inner > .mode-btn {
+    grid-column: 3;
+    grid-row: 2;
   }
   .item3-field {
     width: 100%;
   }
+  .item3-secondary-row {
+    grid-template-columns: minmax(0, 1fr);
+  }
 }
 
-@media (max-width: 360px) {
+@media (max-width: 520px) {
   .item3-duration-control {
     grid-template-columns:
-      minmax(50px, 1fr)
-      88px
-      auto
-      minmax(44px, .65fr)
-      minmax(46px, auto);
-    gap: 4px;
+      minmax(0, 1fr)
+      minmax(110px, .85fr);
+    gap: 6px;
   }
-  .item3-duration-unit {
-    width: 88px;
+  .item3-separator {
+    display: none;
+  }
+  .item3-weekly-hours-input {
+    margin-top: 2px;
+  }
+  .item3-side-label {
+    align-self: center;
   }
 }
 </style>
@@ -473,7 +520,7 @@ textarea { resize: vertical; min-height: 70px; line-height: 1.5; }
     <div id="cardList"></div>
   </div>
 
-      <div class="dash-footer">HUD-11 Interview Tool v2.7.0 RC9 | Labor Compliance Solutions | https://github.com/robvilla14</div>
+      <div class="dash-footer">HUD-11 Interview Tool v2.7.0 RC10 | Labor Compliance Solutions | https://github.com/robvilla14</div>
 </div>
 
 <!-- Copy Forward sheet -->
@@ -1139,7 +1186,7 @@ function renderForm() {
 <div class="fsec">
   <div class="fsec-head">${t('secWork')}</div>
   <div class="fsec-body">
-    <div class="fgrid cols3 item3-grid">
+    <div class="fgrid item3-grid">
       <div class="frow item3-field">
         <label><span class="lnum">3a.</span>${t('l3a')}</label>
         <div class="item3-duration-control">
@@ -1152,15 +1199,17 @@ function renderForm() {
           <span class="item3-side-label">${t('l3aHrs')}</span>
         </div>
       </div>
-      <div class="frow item3-field">
-        <label><span class="lnum">3b.</span>${t('l3b')}</label>
-        <input type="date" value="${esc(ci.lastDate)}" class="item3-date-input" tabindex="104" oninput="currentInterview.lastDate=this.value">
-      </div>
-      <div class="frow item3-field">
-        <label><span class="lnum">3c.</span>${t('l3c')}</label>
-        <div class="item3-control item3-daily-control">
-          <input type="text" inputmode="decimal" value="${esc(ci.hoursLastDay||'')}" class="hours-input item3-daily-hours-input" tabindex="105" oninput="currentInterview.hoursLastDay=this.value">
-          <span class="item3-unit">hrs</span>
+      <div class="item3-secondary-row">
+        <div class="frow item3-field">
+          <label><span class="lnum">3b.</span>${t('l3b')}</label>
+          <input type="date" value="${esc(ci.lastDate)}" class="item3-date-input" tabindex="104" oninput="currentInterview.lastDate=this.value">
+        </div>
+        <div class="frow item3-field">
+          <label><span class="lnum">3c.</span>${t('l3c')}</label>
+          <div class="item3-control item3-daily-control">
+            <input type="text" inputmode="decimal" value="${esc(ci.hoursLastDay||'')}" class="hours-input item3-daily-hours-input" tabindex="105" oninput="currentInterview.hoursLastDay=this.value">
+            <span class="item3-unit">hrs</span>
+          </div>
         </div>
       </div>
     </div>
