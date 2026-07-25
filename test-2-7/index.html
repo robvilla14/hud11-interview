@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <!-- =========================================================================
   HUD-11 Employee Interview Tool
-  v2.7.0 RC10 - Direct PDF generation via pdfmake (Generate PDF primary action);
+  v2.7.0 RC11 - Direct PDF generation via pdfmake (Generate PDF primary action);
             legacy browser Print retained for the field-validation cycle.
             Entry-form length guidance counters on Items 5, 6, 7, 13, 14 and
             the address field. In the form, Item 8a shows N/A only when Item 8
@@ -268,9 +268,29 @@ textarea { resize: vertical; min-height: 70px; line-height: 1.5; }
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 12px;
 }
+.item3-date-shell {
+  width: 260px;
+  max-width: 100%;
+  min-width: 0;
+  overflow: hidden;
+  background: #0d1b2a;
+  border: 1px solid var(--navy3);
+  border-radius: 6px;
+}
+.item3-date-shell:focus-within {
+  border-color: var(--amber);
+}
 .item3-date-input {
   display: block;
-  width: min(100%, 260px);
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+  margin: 0;
+  border: 0 !important;
+  border-radius: 0;
+  background: transparent;
+  -webkit-appearance: none;
+  appearance: none;
 }
 .item3-daily-control {
   width: min(100%, 180px);
@@ -451,6 +471,9 @@ textarea { resize: vertical; min-height: 70px; line-height: 1.5; }
   .item3-secondary-row {
     grid-template-columns: minmax(0, 1fr);
   }
+  .item3-date-shell {
+    width: 100%;
+  }
 }
 
 @media (max-width: 520px) {
@@ -520,7 +543,7 @@ textarea { resize: vertical; min-height: 70px; line-height: 1.5; }
     <div id="cardList"></div>
   </div>
 
-      <div class="dash-footer">HUD-11 Interview Tool v2.7.0 RC10 | Labor Compliance Solutions | https://github.com/robvilla14</div>
+      <div class="dash-footer">HUD-11 Interview Tool v2.7.0 RC11 | Labor Compliance Solutions | https://github.com/robvilla14</div>
 </div>
 
 <!-- Copy Forward sheet -->
@@ -1202,7 +1225,9 @@ function renderForm() {
       <div class="item3-secondary-row">
         <div class="frow item3-field">
           <label><span class="lnum">3b.</span>${t('l3b')}</label>
-          <input type="date" value="${esc(ci.lastDate)}" class="item3-date-input" tabindex="104" oninput="currentInterview.lastDate=this.value">
+          <div class="item3-date-shell">
+            <input type="date" value="${esc(ci.lastDate)}" class="item3-date-input" tabindex="104" oninput="currentInterview.lastDate=this.value">
+          </div>
         </div>
         <div class="frow item3-field">
           <label><span class="lnum">3c.</span>${t('l3c')}</label>
