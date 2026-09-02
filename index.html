@@ -1,9 +1,14 @@
 <!DOCTYPE html>
 <!-- =========================================================================
   HUD-11 Employee Interview Tool
-  v2.7.0 - Production release. Direct PDF generation via pdfmake
-           (Generate PDF primary action); legacy browser Print retained in
-           source as a rollback path pending removal in v2.8.0.
+  v2.7.0 RC14 - iOS-compatible JSON backup export: exportAll() uses capability-based
+            two-path delivery (native share sheet via navigator.canShare when File
+            sharing is supported, else a Blob object-URL download) with an
+            export-in-progress guard. Replaces the data:application/json anchor that
+            failed silently on iOS Safari. JSON structure, filename convention,
+            storage key, import, and PDF generation are unchanged.
+  v2.7.0 RC12 - Direct PDF generation via pdfmake (Generate PDF primary action);
+            legacy browser Print retained for the field-validation cycle.
             Entry-form length guidance counters on Items 5, 6, 7, 13, 14 and
             the address field. In the form, Item 8a shows N/A only when Item 8
             is No and Yes/No only when Item 8 is Yes. The PDF keeps the
@@ -552,7 +557,7 @@ textarea { resize: vertical; min-height: 70px; line-height: 1.5; }
     <div id="cardList"></div>
   </div>
 
-      <div class="dash-footer">HUD-11 Interview Tool v2.7.0 | Labor Compliance Solutions | https://github.com/robvilla14</div>
+      <div class="dash-footer">HUD-11 Interview Tool v2.7.0 RC14 | Labor Compliance Solutions | https://github.com/robvilla14</div>
 </div>
 
 <!-- Copy Forward sheet -->
@@ -1008,27 +1013,99 @@ function deleteInterview(id) {
 }
 
 // ── EXPORT / IMPORT ───────────────────────────────────────────────
-function exportAll() {
-  const all  = getAll();
-  const data = JSON.stringify(all, null, 2);
+let exportAllInProgress = false;
 
-  // Project ref for filename: use single project name if consistent, then number
-  const projNums  = [...new Set(all.map(r => r.projectNumber).filter(Boolean))];
-  const projNames = [...new Set(all.map(r => r.projectName).filter(Boolean))];
-  let projRef = projNames.length === 1 ? projNames[0]
-              : projNums.length === 1  ? projNums[0]
-              : all.length > 0 ? 'multi' : '';
-  const safeRef = projRef ? '-' + projRef.replace(/[^A-Za-z0-9_-]/g, '_').slice(0, 30) : '';
+async function exportAll() {
+  if (exportAllInProgress) {
+    return;
+  }
 
-  // Date + time so same-day exports have unique names
-  const now     = new Date();
-  const dateStr = now.toISOString().slice(0, 10);
-  const timeStr = now.toTimeString().slice(0, 5).replace(':', '');
+  exportAllInProgress = true;
 
-  const a = document.createElement('a');
-  a.href = 'data:application/json;charset=utf-8,' + encodeURIComponent(data);
-  a.download = 'hud11' + safeRef + '_backup-' + dateStr + '-' + timeStr + '.json';
-  a.click();
+  try {
+    const all  = getAll();
+    const data = JSON.stringify(all, null, 2);
+
+    // Project ref for filename: use single project name if consistent, then number
+    const projNums  = [...new Set(all.map(r => r.projectNumber).filter(Boolean))];
+    const projNames = [...new Set(all.map(r => r.projectName).filter(Boolean))];
+    let projRef = projNames.length === 1 ? projNames[0]
+                : projNums.length === 1  ? projNums[0]
+                : all.length > 0 ? 'multi' : '';
+    const safeRef = projRef ? '-' + projRef.replace(/[^A-Za-z0-9_-]/g, '_').slice(0, 30) : '';
+
+    // Date + time so same-day exports have unique names.
+    // Local date + time so same-day exports have unique, device-accurate names.
+    const now = new Date();
+    const pad = n => String(n).padStart(2, '0');
+
+    const dateStr =
+      now.getFullYear() + '-' +
+      pad(now.getMonth() + 1) + '-' +
+      pad(now.getDate());
+
+    const timeStr =
+      pad(now.getHours()) +
+      pad(now.getMinutes());
+
+    const filename = 'hud11' + safeRef + '_backup-' + dateStr + '-' + timeStr + '.json';
+
+    const mimeType = 'application/json';
+    const blob = new Blob([data], { type: mimeType });
+
+    // Prefer the native share sheet only when the browser confirms it can
+    // share this specific file. navigator.share alone is insufficient: a
+    // browser may support sharing text/URLs but not files.
+    let backupFile   = null;
+    let canShareFile = false;
+
+    if (typeof File === 'function') {
+      backupFile = new File([blob], filename, { type: mimeType });
+      try {
+        canShareFile =
+          typeof navigator.share === 'function' &&
+          typeof navigator.canShare === 'function' &&
+          navigator.canShare({ files: [backupFile] });
+      } catch (error) {
+        canShareFile = false;
+      }
+    }
+
+    if (canShareFile) {
+      try {
+        // Share the file only - no title. iOS counts a title as a second
+        // share item ("2 Items"); the filename rides on backupFile.name.
+        await navigator.share({ files: [backupFile] });
+        return;
+      } catch (error) {
+        // Closing the share sheet is a user cancellation, not an app error.
+        if (error.name === 'AbortError') {
+          return;
+        }
+        // Do NOT fall back to the Blob download here: the original tap's
+        // user activation has already been consumed by navigator.share().
+        console.error('HUD-11 backup sharing failed:', error);
+        showToast('Backup export failed. Please try again.');
+        return;
+      }
+    }
+
+    // Fallback for browsers without native file sharing (e.g. desktop Firefox).
+    const url    = URL.createObjectURL(blob);
+    const anchor = document.createElement('a');
+    anchor.href          = url;
+    anchor.download      = filename;
+    anchor.style.display = 'none';
+    document.body.appendChild(anchor);
+    anchor.click();
+    anchor.remove();
+    setTimeout(() => { URL.revokeObjectURL(url); }, 1000);
+  } catch (error) {
+    console.error('HUD-11 backup export failed:', error);
+    showToast('Backup export failed. Please try again.');
+  } finally {
+    exportAllInProgress = false;
+  }
 }
 function importAll(evt) {
   const files = Array.from(evt.target.files || []);
@@ -1194,8 +1271,14 @@ function renderForm() {
       </div>
       <div class="frow">
         <label><span class="lnum">2b.</span>${t('l2bEmail')}</label>
-        <input type="email" value="${esc(ci.empEmail)}" list="emailDomains" oninput="currentInterview.empEmail=this.value;updateEmailList(this.value)">
-        <datalist id="emailDomains"></datalist>
+        <input
+		   type="text"
+		   inputmode="email"
+		   autocomplete="email"
+		   autocapitalize="none"
+		   spellcheck="false"
+		   value="${esc(ci.empEmail)}"
+		   oninput="currentInterview.empEmail=this.value">
       </div>
     </div>
     <div class="fgrid cols2" style="margin-top:10px">
@@ -1908,17 +1991,6 @@ function fmtPhone(val) {
   if (d.length < 4) return d;
   if (d.length < 7) return '(' + d.slice(0,3) + ') ' + d.slice(3);
   return '(' + d.slice(0,3) + ') ' + d.slice(3,6) + '-' + d.slice(6);
-}
-
-// ── EMAIL AUTOCOMPLETE ────────────────────────────────────────────
-const EMAIL_DOMAINS = ['@gmail.com','@hotmail.com','@yahoo.com','@outlook.com','@icloud.com','.com'];
-function updateEmailList(val) {
-  const dl = document.getElementById('emailDomains');
-  if (!dl) return;
-  const at = val.indexOf('@');
-  if (at < 0) { dl.innerHTML = ''; return; }
-  const user = val.slice(0, at);
-  dl.innerHTML = EMAIL_DOMAINS.map(d => `<option value="${user}${d}">`).join('');
 }
 
 // ── EXPANDED SIGNATURE PAD ────────────────────────────────────────
